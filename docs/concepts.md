@@ -1,75 +1,84 @@
 # The HTML presentation layer
 
-Questionnaire is the semantic model: it defines items, types, repetition,
-terminology, constraints and reactive rules. QuestionnaireResponse is the result
-model: it records typed answers in the same tree.
+FHIR Forms separates three concerns that are often collapsed into one renderer:
 
-HTML is the presentation model. It is deliberately not stored inside the
-Questionnaire and is not limited to the controls or layouts a generic SDC
-renderer understands.
+| layer | responsibility |
+|---|---|
+| Questionnaire | semantic definition: items, types, terminology, constraints, repetition, and reactive rules |
+| HTML | presentation: layout, widgets, navigation, interaction, and accessibility |
+| QuestionnaireResponse | typed result: answers arranged in the Questionnaire tree |
 
-## The bridge
+A generic renderer is one possible producer of the HTML layer. It is not the
+definition of conformance and has no privileged wire format.
 
-The presentation layer binds the three representations:
+## The binding contract
 
-```text
+The presentation layer connects the three representations through observable
+behavior:
+
+~~~text
 Questionnaire item tree
-        ↕ item paths and behavior
+        <-> canonical item paths and rule semantics
 HTML widgets and successful controls
-        ↕ collection and type binding
+        <-> ordered entry collection and FHIR type binding
 QuestionnaireResponse answer tree
-```
+~~~
 
-The binding is bidirectional. A form must be able to display an existing response
-and its entry list must be collectable into an equivalent response for every
-answer the form permits a user to change.
+The contract is intentionally narrower than a UI model. It specifies how a
+control identifies an item occurrence, how submitted lexical values become FHIR
+answers, and how Questionnaire behavior remains authoritative. It does not
+specify DOM shape, CSS, component libraries, or page navigation.
+
+This narrow boundary is what permits rich bespoke HTML without making it
+application-specific at the data boundary.
 
 ## No second UI schema
 
-The layer does not introduce JSON components, screen definitions or another form
-resource. HTML itself is the representation. The specification defines only the
-conventions needed to connect that representation to FHIR:
+HTML itself is the presentation representation. The layer does not add JSON
+components, screen definitions, or another form resource. It adds only:
 
-- canonical names address Questionnaire items, occurrences and value components;
-- successful-control rules define what the browser actually submits;
-- type binding turns lexical HTML values into FHIR `value[x]` answers;
-- reactive behavior preserves `enableWhen`, calculated and read-only semantics;
-- conformance checks compare the form with its Questionnaire.
+- canonical field paths;
+- ordered HTML entry-list semantics;
+- Questionnaire-aware FHIR type binding;
+- shared rules for enablement and calculated values;
+- linting and conformance evidence.
 
-SDC rendering extensions remain useful hints for generic renderers. A bespoke
-form may express a richer interface directly in HTML without extending the
-Questionnaire merely to describe its visual implementation.
+SDC rendering extensions remain valuable inputs to a generic renderer. Bespoke
+forms may express decisions that those hints do not contain while using the same
+binding contract.
 
-## Conforming rendering
+## Equivalence
 
-A page is a rendering of a Questionnaire when:
+Two visually unrelated forms may be equivalent presentations when their
+successful controls and dynamic behavior preserve the same Questionnaire
+semantics. Conversely, visual similarity does not make a form equivalent if it
+loses ancestry, changes cardinality, accepts the wrong type, or submits an answer
+from a disabled branch.
 
-- every answer it can submit resolves to an item in that Questionnaire;
-- every enabled answerable item it claims to support can be represented;
-- values, ancestry and repetition follow the Questionnaire definition;
-- disabled and server-owned values cannot become trusted user answers;
-- dynamic behavior has the same result whether executed in the browser or on the
-  server;
-- collecting its entries produces the expected QuestionnaireResponse.
+The normative requirements are collected in [Conformance](conformance.md).
+Rendering and collection are expected to preserve every editable answer:
 
-DOM shape and visual layout are not compared. Two completely different pages may
-be equivalent renderings when they expose the same answer capabilities and
-preserve the same semantics.
+~~~text
+collect(render(response)) = response
+~~~
+
+Calculated, disabled, hidden, and server-owned values are outside that editable
+subset and are re-derived from trusted inputs.
 
 ## Terms
 
 **Item path** identifies a Questionnaire item through its ancestors.
 
-**Occurrence** selects one answer or repeated group instance.
+**Occurrence** selects one instance of a repeating item or answer.
 
-**Component** selects part of a complex FHIR value such as `Quantity.value` or
-`Coding.code`.
+**Component** selects part of a complex FHIR value, such as Quantity.value or
+Coding.code.
 
-**Widget** is one visual answer control. A widget may contain several HTML
-controls while representing one FHIR value.
+**Widget** is one visual answer control. It may contain several successful HTML
+controls for one FHIR value.
 
-**Entry list** is the ordered sequence of `(name, value)` pairs produced by HTML
-form submission.
+**Entry list** is the ordered sequence of name/value pairs produced by HTML form
+submission.
 
-**Binding kernel** is the shared path resolver, type registry and rule semantics
-used by every presentation-layer component.
+**Binding kernel** is the shared path resolver, type registry, cardinality model,
+and rule semantics used by presentation-layer components.

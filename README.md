@@ -1,17 +1,23 @@
 # fhir-forms
 
-A bridge between ordinary HTML forms and FHIR Questionnaire. A page with its own
-markup, a test, an agent, or another UI can produce the same
-QuestionnaireResponse as the renderer, without requiring a client-side runtime.
+FHIR Forms lets teams build intentionally designed HTML interfaces while keeping
+FHIR Questionnaire as the semantic source of truth. A bespoke page, generic
+renderer, test, agent, or another UI can post the same public field contract and
+produce the same typed QuestionnaireResponse.
 
-- [Specification index](docs/index.md): the normative protocol and reading order.
-- [Field names](docs/field-names.md): the public wire grammar.
-- [Types](docs/types.md): every Questionnaire item type end to end.
-- [Collect and render](docs/collect-and-render.md): inverse algorithms.
-- [Examples](docs/examples/blood-pressure.md): blood pressure, PHQ-9, and diagnosis.
-- [Decisions](docs/decisions.md) and [open questions](docs/open-questions.md).
-- [Prior art](prior-art.md): related form systems and lessons.
+- [Specification overview](docs/index.md)
+- [Presentation-layer model](docs/concepts.md)
+- [Field-path grammar](docs/field-names.md)
+- [HTML entry-list semantics](docs/entry-list.md)
+- [FHIR type binding](docs/types.md)
+- [Collector and validation](docs/parser.md)
+- [Form linter](docs/linter.md)
+- [Reactive runtime](docs/expressions.md)
+- [Conformance](docs/conformance.md)
+- [Worked examples](docs/examples/blood-pressure.md)
+- [Prior art](prior-art.md)
 
-The design grew out of clinical screens on Aidbox/FHIR, where the same form must
-work in a clinician chart and a patient portal, and where answers should become
-useful clinical records rather than unread documents.
+The implementation includes the strict Collector slice and a server-rendered
+examples UI. Renderer, linter, extraction adapters, and the complete reactive
+runtime are broader specification components and should not be assumed complete
+without corresponding code and tests.

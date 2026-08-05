@@ -1,64 +1,78 @@
 # Request and response exchange
 
-## The exchange
+The Collector is independent of HTTP. It receives a Questionnaire, an ordered
+entry list, and trusted context. A host endpoint decides when to collect, whether
+to persist, and which HTML or API representation to return.
 
-A form posts to its own address, url-encoded (or multipart — both parse), and the
-server answers with the form again:
+## Interaction modes
 
-| body | server does | answers with |
+A form endpoint commonly supports three modes:
+
+| mode | host action | persistence |
 |---|---|---|
-| no `__submit`, recompute requested | collects, runs server-side reactive rules — **writes nothing** | the form, re-rendered, with enabled items and calculated outputs updated |
-| `__submit=1`, something invalid | collects, does not write | the form, with each problem on the field that caused it (`data-invalid`, `data-role="error"`) |
-| `__submit=1`, valid | `questionnaire.answer` — writes the response, extracts measurements if the form declares them, closes a Task that asked for it | the answers grid, and an `hx-location` to the address it now lives at |
+| recompute | collect draft entries, run server-side rules, render updated state and issues | none |
+| final submit with issues | collect and render the form with keyed issues | none |
+| valid final submit | persist the QuestionnaireResponse and run configured post-processing | write |
+| draft save, when supported | collect with draft policy and render the saved state | write without final extraction |
 
-The recompute exchange is the baseline that makes the form correct without a
-client expression engine. It may use `hx-trigger="change delay:250ms"` with
-`target: this, swap: outerHTML`. A native submit with JavaScript disabled produces
-the same evaluated state; it is less immediate only because no script initiates
-the request on change.
+Application controls that select a mode are consumed by the host before the
+remaining entries reach the Collector. This repository uses a submit marker such
+as <code>__submit=1</code>, but the marker is not part of the Questionnaire path
+grammar.
 
-A renderer may instead compile supported `enableWhen` and calculated expressions
-to a small client runtime. Such rules update immediately and do not post on every
-change. Unsupported or server-dependent rules retain the recompute exchange, so
-one form may use both strategies. In all cases final collection evaluates the
-rules on the server and ignores client assertions about enabled or calculated
-state. See [Enablement and calculated fields](/spec/expressions).
+A recompute is always non-writing. This permits server execution of enableWhen
+and calculated fields without turning every change into a clinical update.
 
-**A draft is a second submit button, not a field.** HTML lets the submitter
-override where and how the form posts, which is exactly the difference between
-finishing a form and putting it down:
+## Progressive enhancement
 
-```haml
-%button{ type: "submit", name: "__submit", value: 1 } Submit
-%button{ type: "submit", name: "__submit", value: 1,
-         formaction: "…&status=in-progress", formnovalidate: true } Save draft
-```
+The server exchange is the baseline. A native form can submit explicitly and
+receive its next correct state. htmx may initiate debounced recomputes and replace
+a form or fragment; compiled client rules may avoid a request entirely. Neither
+changes the field paths or Collector result.
 
-`formnovalidate` is the part that matters: without it the browser refuses to post
-a form with an unanswered `required` question, and an unfinished draft is by
-definition unfinished. The server writes `status: in-progress`, skips extraction,
-and answers with the form again.
+When client and server strategies are mixed, final collection still evaluates
+all rules on the server. Client state is a preview, not an assertion about what
+may be stored.
 
 ## Errors
 
-Errors come back keyed by `linkId` — never as a flat message — and the renderer
-puts each on its own field:
+Collector issues use the canonical submitted path and linkId when known:
 
-```
-{ "sbp": "must be at least 86 F", "mood": "this one is required" }
-```
+~~~json
+{
+  "code": "value.invalid-lexical-form",
+  "path": "item[visit][0].item[weight].value",
+  "linkId": "weight",
+  "message": "Expected a FHIR decimal"
+}
+~~~
 
-Kinds of error `collect` produces, per field: a required question with no answer;
-a number outside `minValue`/`maxValue` or the SDC `minQuantity`/`maxQuantity`
-(compared in the unit the range is stated in, never converted); a value shorter or
-longer than `minLength`/`maxLength`, or failing the `regex` extension; a decimal
-with more places than `maxDecimalPlaces` allows; a quantity whose question offers
-several units with none chosen.
+The renderer associates an issue with the corresponding widget and exposes
+accessible invalid and error state. A path, rather than linkId alone, is required
+to distinguish repeated occurrences. Form-level issues remain possible for
+cross-field constraints, expression failures, or request context.
 
-**And errors that are not about one field.** "Diastolic must be below systolic"
-belongs to neither of them, and SDC has the place for it: `targetConstraint`, on
-the questionnaire or on an item — an expression, a human-readable message and a
-severity. It is evaluated after the answer is assembled, and its message lands on
-the item that carries it (or on the form when the constraint is the form's own).
-Without this, cross-field rules end up hard-coded in whoever renders the form,
-which is where they cannot travel and cannot be reviewed.
+The host should return all independent issues from one collection attempt so the
+user can correct them together.
+
+## Identity and trusted context
+
+Questionnaire canonical URL, response identity, subject, encounter, author, and
+authorization context are endpoint concerns. They may be represented in a route,
+session, signed token, or other host protocol, but a hidden control alone does
+not make them trusted.
+
+The host verifies context before persistence and supplies authoritative values to
+the Collector or persistence adapter. Editing an existing response must preserve
+identity and apply the host's concurrency and amendment policy.
+
+## Persistence and extraction
+
+A successful collection yields a typed QuestionnaireResponse. Persistence,
+status transitions, extraction, Task completion, audit, and redirect behavior
+belong to host adapters. They must not change the meaning of the entry-list
+contract.
+
+If extraction is declared, failure is reported as a failed operation rather than
+silently returning success. Recompute never invokes persistence or extraction.
+See [Extraction](extraction.md).

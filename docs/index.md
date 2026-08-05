@@ -32,12 +32,9 @@ components, but then the form becomes specific to that renderer. Another
 implementation cannot reliably reproduce the presentation, and custom HTML no
 longer has a standard way to prove that it still represents the Questionnaire.
 
-Questionnaire is therefore a strong semantic model, but not a complete UI model.
-SDC adds portable behavior and rendering guidance, yet it does not attempt to be
-a general-purpose HTML layout and interaction language. Real clinical forms
-routinely need presentation beyond those hints: dense paper-like layouts,
-compound widgets, responsive columns, inline units, custom navigation,
-progressive disclosure and application-specific interactions.
+This boundary is deliberate, not a missing feature that every generic renderer
+should repair. Questionnaire and SDC remain portable semantic definitions;
+HTML supplies the application-specific composition and interaction language.
 
 Without a standard boundary between those semantics and the rendered interface,
 implementers usually have to choose one of three compromises:

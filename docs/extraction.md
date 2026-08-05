@@ -1,18 +1,39 @@
 # Extraction
 
-This layer is independent of the HTML wire contract and may be implemented by different host adapters.
+Extraction turns a QuestionnaireResponse into other FHIR resources. It is
+downstream of the HTML binding contract: the same valid response must extract the
+same resources regardless of which conforming HTML form produced it.
 
-## Which extraction mechanism
+## Choosing a mechanism
 
-| the answer becomes | use | how it is said in the form |
+| result | SDC mechanism | definition source |
 |---|---|---|
-| Observations — a measurement, a score, a screening result | **observation-based** | `item.code` on the question (and the panel code on the group), `observationExtract: true`, inherited from the root |
-| a Condition, an AllergyIntolerance, a MedicationStatement — any other resource | **definition-based** | `definition` on the group (which resource) and on each question (which element) |
-| something with fixed content around the answers | **template-based** | a template resource in the form with placeholders |
-| anything the above cannot say | **StructureMap-based** | a map; the heaviest, and the last resort |
+| measurements, scores, and screening results | observation-based | item.code, optional coded group, and observationExtract |
+| Condition, AllergyIntolerance, MedicationStatement, or another resource type | definition-based | group and item definition paths |
+| resources with fixed surrounding content | template-based | extraction template with answer placeholders |
+| transformations not expressible above | StructureMap-based | explicit map |
 
-A form may use more than one: a visit form can extract its vitals as Observations
-and its diagnoses as Conditions in the same submission.
+Use the lightest mechanism that preserves the clinical meaning. A single
+Questionnaire may combine mechanisms, such as extracting vital signs as
+Observations and diagnoses as Conditions.
 
----
+## Presentation independence
 
+HTML layout, widget composition, and field component names do not select an
+extraction mechanism. The Questionnaire carries extraction metadata; the
+Collector produces the response tree on which extraction operates.
+
+A visually similar question may have different clinical meaning. Patient-reported
+history, an encounter diagnosis, and a managed problem may use the same
+autocomplete widget while extracting differently or not extracting at all.
+
+## Host responsibilities
+
+The host publishes or resolves the Questionnaire version used for extraction,
+executes extraction only after successful final collection, and handles the
+response and extracted resources consistently. Amendment and idempotency policy
+must prevent an edited answer from creating duplicate clinical records.
+
+Extraction promised by the Questionnaire is part of operation success. Producing
+no expected resources or failing midway is an error, not a successful form save
+with a warning.

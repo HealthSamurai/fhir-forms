@@ -1,239 +1,152 @@
-# Type mapping
+# FHIR type binding
 
-One block per type: what is written in the form, what the browser renders, what it
-posts, what is stored. Names follow the grammar above — a bare path for a
-primitive, named parts for a composite answer.
+Type binding converts lexical HTML entries into FHIR answer values. The
+Questionnaire item type selects the binding rule; neither the field name nor the
+submitted string may select its own type.
 
-### boolean
+Field paths below use the canonical grammar from
+[Field names and Questionnaire paths](field-names.md). Empty-answer behavior is
+defined once in [HTML form entry list](entry-list.md).
 
-```yaml
-- { linkId: smoker, type: boolean, text: Do you smoke? }
-```
-```haml
-%div{ data: { field: "item[smoker]" }, role: "radiogroup", "aria-label": "Do you smoke?" }
-  %label
-    %input{ type: "radio", name: "item[smoker]", value: "true" }
-    Yes
-  %label
-    %input{ type: "radio", name: "item[smoker]", value: "false" }
-    No
-```
-```
-item[smoker] = true        →   { linkId: smoker, answer: [{ valueBoolean: true }] }
-```
+## Primitive answers
 
-Two radios, never a checkbox: an unchecked box posts nothing, so "no" and "not
-answered" would arrive as the same request.
+A primitive answer uses the bare item path.
 
-### integer · decimal
+| Questionnaire type | example entry | QuestionnaireResponse value | typical HTML control |
+|---|---|---|---|
+| boolean | item[smoker] = false | valueBoolean | two radios with true/false values |
+| integer | item[count] = 6 | valueInteger | number, step 1 |
+| decimal | item[hba1c] = 6.4 | valueDecimal | number, step any |
+| date | item[onset] = 2019-04 | valueDate | year, month, or date control matching required precision |
+| dateTime | item[seen] = 2026-08-05T09:14 | valueDateTime | datetime-local plus an authoritative offset context |
+| time | item[taken] = 09:14 | valueTime | time |
+| string | item[name] = Ada | valueString | single-line input |
+| text | item[note] = ... | valueString | textarea |
+| url | item[report] = https://example.org/r | valueUri | URL input |
 
-```yaml
-- { linkId: slept, type: integer, text: Hours slept, extension: [ minValue 0, maxValue 24 ] }
-- { linkId: hba1c, type: decimal, text: HbA1c }
-```
-```haml
-%input{ name: "item[slept]", type: "number", step: 1,     min: 0, max: 24 }
-%input{ name: "item[hba1c]", type: "number", step: "any" }
-```
-```
-item[slept] = 6            →   answer: [{ valueInteger: 6 }]
-item[hba1c] = 6.4          →   answer: [{ valueDecimal: 6.4 }]
-```
+Boolean parsing accepts only the declared true and false lexical forms. Zero and
+false are answers, not emptiness.
 
-`step="any"` on a decimal, or the browser silently refuses `6.4`. A comma typed
-for the decimal point is read as one; anything that is not a number at all is an
-error on the field, never a `NaN` in the record.
+Integer and decimal parsing must reject non-finite or partial values rather than
+storing NaN. A locale adapter may normalize a decimal comma before binding, but
+the resulting value must still be a valid FHIR decimal.
 
-### quantity
+FHIR dates may have year, year-month, or full-date precision. A renderer must not
+force a more precise value than the Questionnaire requests. A datetime-local
+control has no offset; the host must attach the correct offset from trusted
+workflow context before materialization.
 
-```yaml
-- linkId: weight
-  type: quantity
-  text: Weight
-  extension:
-    - { url: .../questionnaire-unitOption, valueCoding: { system: http://unitsofmeasure.org, code: kg } }
-    - { url: .../questionnaire-unitOption, valueCoding: { system: http://unitsofmeasure.org, code: "[lb_av]" } }
-```
-```haml
-%input{  name: "item[weight].value", type: "number", step: "any" }
-%select{ name: "item[weight].unit" }
-  %option{ value: "kg" } kg
-  %option{ value: "[lb_av]" } lb
-```
-```
+## Quantity
+
+A Quantity uses components of one item occurrence:
+
+~~~text
 item[weight].value = 83.5
-item[weight].unit  = kg    →   answer: [{ valueQuantity: { value: 83.5, unit: kg, code: kg,
-                                                          system: http://unitsofmeasure.org } }]
-```
+item[weight].unit  = kg
+~~~
 
-Both halves are named because neither is the answer alone. With one declared unit
-(`questionnaire-unit`) the select disappears, `:unit` is not posted, and the
-server fills the unit in from the definition — but `:value` stays, because the
-type is still composite.
+The Collector materializes:
 
-Whether the offered units are the only ones allowed is the definition's to say:
-SDC's `unitOpen` distinguishes "pick from this list" from "pick, or write your
-own". We assume the list is closed; a form that says otherwise needs the unit
-field to accept a typed code, which is the same shape as an open choice.
+~~~json
+{
+  "valueQuantity": {
+    "value": 83.5,
+    "unit": "kg",
+    "system": "http://unitsofmeasure.org",
+    "code": "kg"
+  }
+}
+~~~
 
-### date · dateTime · time
+Value is the primary component. An optional Quantity with an empty value is
+absent even if a unit selector posted its default.
 
-```yaml
-- { linkId: onset, type: date,     text: Since }
-- { linkId: seen,  type: dateTime, text: Seen at }
-- { linkId: took,  type: time,     text: Taken at }
-```
-```haml
-%input{ name: "item[onset]", type: "date" }
-%input{ name: "item[seen]",  type: "datetime-local" }
-%input{ name: "item[took]",  type: "time" }
-```
-```
-item[onset] = 2019-04-01   →   answer: [{ valueDate: "2019-04-01" }]
-item[seen]  = 2026-08-05T09:14
-                          →   answer: [{ valueDateTime: "2026-08-05T09:14:00+01:00" }]
-```
+When the Questionnaire declares one fixed unit, the form may omit the unit
+control and the server fills the unit coding from the definition. When it offers
+multiple units, the selected unit is part of the answer and is required whenever
+a value is present. A decimal item cannot offer a meaningful unit choice because
+valueDecimal has nowhere to store it.
 
-The offset on a `dateTime` is attached by the server — `datetime-local` has none,
-and without it two sites disagree by hours.
+The stored answer preserves the entered unit. Conversion may be used for display
+or validation, but silent normalization on ingest loses what the user entered.
 
-**Partial dates have a control.** `2019-04` is valid FHIR, and `<input
-type="month">` submits exactly that; `week` exists too. So precision picks the
-control rather than falling out of it: year → a number field, year-and-month →
-`month`, full → `date`. SDC even lets the definition demand a precision —
-`minLength: 7` on a date means "at least the month" — which is the same rule
-expressed where it belongs.
+## Coding and choice
 
-### string · text · url
+The canonical component form is:
 
-```yaml
-- { linkId: allergy, type: string, text: Allergy, maxLength: 60 }
-- { linkId: note,    type: text,   text: Anything else }
-- { linkId: link,    type: url,    text: Link to the report }
-```
-```haml
-%input{    name: "item[allergy]", type: "text", maxlength: 60 }
-%textarea{ name: "item[note]" }
-%input{    name: "item[link]", type: "url" }
-```
-```
-item[allergy] = peanuts    →   answer: [{ valueString: "peanuts" }]
-item[note]    = …          →   answer: [{ valueString: "…" }]
-item[link]    = https://…  →   answer: [{ valueUri: "https://…" }]
-```
+~~~text
+item[position].system  = http://snomed.info/sct
+item[position].code    = 33586001
+item[position].display = Sitting
+~~~
 
-`string` and `text` differ only in the control; both store `valueString`.
+System and code establish identity. Display is optional presentation and is
+verified or replaced from the Questionnaire options or trusted terminology.
 
-### choice
+For R4 choice and open-choice items, the Collector validates Coding against
+answerOption or answerValueSet. In R5 the equivalent binding uses coding with
+answerConstraint. Implementations must bind against the FHIR version of the
+Questionnaire rather than blending the two models.
 
-```yaml
-- linkId: pos
-  type: choice
-  text: Position
-  answerOption:
-    - { valueCoding: { system: http://snomed.info/sct, code: 33586001, display: Sitting } }
-    - { valueCoding: { system: http://snomed.info/sct, code: 10904000, display: Standing } }
-```
-```haml
-%input{ type: "hidden", name: "item[pos].system", value: "http://snomed.info/sct" }
-%div{ data: { field: "item[pos]" }, role: "radiogroup" }
-  %label
-    %input{ type: "radio", name: "item[pos].code", value: "33586001" }
-    Sitting
-  %label
-    %input{ type: "radio", name: "item[pos].code", value: "10904000" }
-    Standing
-```
-```
-item[pos].system = http://snomed.info/sct
-item[pos].code = 33586001  →   answer: [{ valueCoding: { system: http://snomed.info/sct,
-                                                        code: 33586001, display: Sitting } }]
-```
+A non-repeating Coding may use the optional atomic form defined in
+[field-names.md](field-names.md). The component form remains canonical.
 
-The canonical wire form mirrors Coding components. `system + code` are
-validated against `answerOption` or `answerValueSet`; `display` is optional
-and is not identity. If a single select or radio must carry the whole Coding,
-its bare field may use `system|code|display` sugar. `itemControl` still decides
-the visual control.
+An open choice may instead carry free text:
 
-### open-choice
-
-```yaml
-- linkId: mood
-  type: open-choice
-  text: How do you feel?
-  answerOption:
-    - { valueCoding: { code: good, display: Good } }
-    - { valueCoding: { code: bad,  display: Not great } }
-```
-```haml
-%label
-  %input{ type: "radio", name: "item[mood].code", value: "bad" }
-  Not great
-%input{ name: "item[mood].text", type: "text", placeholder: "or say it your own way" }
-```
-```
-item[mood].code = bad      →   answer: [{ valueCoding: { code: bad, display: Not great } }]
+~~~text
 item[mood].text = tired after the shift
-                          →   answer: [{ valueString: "tired after the shift" }]
-```
+~~~
 
-Not an exception to "choices, not meanings": for an open choice the answer is
-*either* a coding or a string, and the suffix says which arrived.
+This produces valueString. A request must not collapse a coding and free text
+into one ambiguous scalar answer.
 
-The label of that free-text box is the definition's to write, not the renderer's
-to invent: SDC's `openLabel` ("Other, please specify", "Additional condition") is
-what goes above `:text`.
+## Reference
 
-### reference
+Reference components use the same item path:
 
-```yaml
-- { linkId: referrer, type: reference, text: Referred by }
-```
-```haml
-%input{ name: "item[referrer].reference", type: "hidden", value: "Practitioner/17" }
--# the visible control is a combobox that searches; picking one sets the hidden field
-```
-```
+~~~text
 item[referrer].reference = Practitioner/17
-                          →   answer: [{ valueReference: { reference: Practitioner/17 } }]
-```
+item[referrer].display   = Dr Smith
+~~~
 
-`Reference.display` is filled by the server from the resource, never sent.
+The server validates the reference target and derives trusted display text.
+Display alone never identifies a resource.
 
-### attachment
+## Attachment
 
-```yaml
-- { linkId: photo, type: attachment, text: Photo of the meter }
-```
-```haml
-%input{ name: "item[photo].json", type: "hidden",
-        value: '{"contentType":"image/jpeg","url":"Binary/abc"}' }
-```
-```
-item[photo].json = {…}     →   answer: [{ valueAttachment: { contentType: image/jpeg, url: Binary/abc } }]
-```
+A multipart form may submit a File at the bare item path and supported metadata
+components such as title or contentType. Binary storage, malware scanning,
+external URLs, and the Binary/DocumentReference policy belong to the host
+adapter.
 
-The escape hatch, until file answers are carried properly: where the byte goes
-(`Binary`, `DocumentReference`, blob storage) and who scans it are open questions.
+Attachment support is capability-dependent until that lifecycle is profiled
+normatively. An opaque JSON field is not a general substitute for typed
+attachment binding.
 
-### group · display
+## Structural item types
 
-```yaml
-- linkId: bp
-  type: group
-  text: Reading
-  repeats: true
-  item: [ … ]
-- { linkId: hint, type: display, text: Rest for five minutes before measuring. }
-```
-```haml
-%fieldset{ data: { field: "item[bp]", row: 0 } }
-  %legend Reading 1
-  -# children are named item[bp][0]/<linkId>
-%p Rest for five minutes before measuring.
-```
+Group and display items never carry answers.
 
-A group has no field of its own — it contributes a segment to the path of its
-children, and only when it repeats. A `display` never has a field; a body that
-contains one is an unknown field.
+A group contributes an explicit item step to every descendant path, whether or
+not the group repeats:
+
+~~~text
+item[contact].item[email]
+item[visit][0].item[date]
+~~~
+
+A display item produces content only. Any submitted answer targeting a group or
+display item is an issue.
+
+## Compound-value rules
+
+For every complex type, the binding registry defines:
+
+- legal and required components;
+- its primary component and empty-answer rule;
+- duplicate and scalar/component collision behavior;
+- lexical conversion and FHIR materialization;
+- definition-derived values that the browser need not post.
+
+Unknown components are rejected. A Collector must not preserve arbitrary
+submitted properties in a FHIR datatype.
