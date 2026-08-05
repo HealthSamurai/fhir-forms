@@ -1,32 +1,70 @@
-# FHIR Forms specification
+# FHIR Forms Presentation Layer
 
-This specification defines a renderer-independent wire contract between ordinary
-HTML forms and FHIR Questionnaire/QuestionnaireResponse.
+FHIR Questionnaire and SDC describe clinical meaning, answer types, constraints
+and a portable set of rendering hints. They do not attempt to encode every
+possible user interface.
 
-Read the normative pages in this order:
+This specification adds an HTML presentation layer without adding another UI
+schema:
 
-1. [Concepts](concepts.md)
-2. [Field names and wire mapping](field-names.md)
-3. [Type mapping](types.md)
-4. [Collect and render](collect-and-render.md)
-5. [Request and response exchange](exchange.md)
-6. [Skip logic and calculated expressions](expressions.md)
-7. [Extraction](extraction.md)
-8. [Conformance and corner cases](conformance.md)
-9. [Decision register](decisions.md)
-10. [Open questions and implementation gaps](open-questions.md)
+```text
+Questionnaire
+    ↓ semantic binding
+arbitrary dynamic HTML form
+    ↓ canonical HTML entry list
+QuestionnaireResponse
+```
 
-Worked examples:
+An HTML form is considered a rendering of a Questionnaire when it follows this
+binding contract. It may be hand-written, server-rendered, progressively enhanced
+or implemented as a client application. Conformance depends on behavior and form
+entries, not on which renderer produced the DOM.
+
+The presentation layer is implemented by independent components that share one
+binding kernel:
+
+- a **Collector and Validator** converts an ordered form entry list into a typed
+  QuestionnaireResponse and reports structural or value issues;
+- a **Form Linter** checks that an HTML form can represent the Questionnaire and
+  identifies behavior that still requires runtime verification;
+- a **Reactive Runtime** executes `enableWhen` and calculated fields through
+  compiled client JavaScript, server re-rendering, or both;
+- a **Renderer** is optional convenience tooling, not a requirement of the
+  contract.
+
+## Start
+
+1. [The presentation layer](concepts.md)
+2. [Components and shared kernel](components.md)
+
+## HTML contract
+
+1. [Rendering Questionnaire items as HTML](rendering.md)
+2. [Field names and Questionnaire paths](field-names.md)
+3. [HTML form entry list](entry-list.md)
+4. [FHIR type binding](types.md)
+
+## Runtime components
+
+1. [Collector and result validation](parser.md)
+2. [Form linter](linter.md)
+3. [Reactive runtime](expressions.md)
+
+## Protocol and output
+
+1. [Request and response exchange](exchange.md)
+2. [Extraction](extraction.md)
+3. [Conformance](conformance.md)
+
+## Worked examples
 
 - [Blood pressure and quantities](examples/blood-pressure.md)
 - [PHQ-9 scoring](examples/phq9.md)
 - [Diagnosis](examples/diagnosis.md)
 
-A normative rule belongs on exactly one topical page. Examples illustrate rules
-but do not define a second version of them. Rationale remains in
-[prior-art.md](../prior-art.md).
+## Design notes
 
-## QuestionnaireResponse parser
-
-- [QuestionnaireResponse form parser](parser.md) defines the strict conversion
-  from an ordered HTML form entry list into a typed QuestionnaireResponse.
+- [Decision register](decisions.md)
+- [Open questions](open-questions.md)
+- [Prior art](../prior-art.md)
+- [Compatibility index](../spec.md)

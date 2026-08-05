@@ -24,8 +24,8 @@ ${opts.headExtra ?? ""}
     <small class="hidden font-mono text-[.68rem] font-normal text-muted sm:inline">proc runtime</small>
   </a>
   <nav class="flex items-center gap-1" aria-label="Primary">
+    <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/">Specification</a>
     <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/examples">Examples</a>
-    <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/spec">Specification</a>
     <a class="hidden rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark sm:block" href="/fns">Registry</a>
   </nav>
 </header>

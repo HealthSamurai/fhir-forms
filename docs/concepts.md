@@ -1,79 +1,75 @@
-# A bridge between HTML forms and FHIR Questionnaire
+# The HTML presentation layer
 
-A **Questionnaire** is a typed tree with codes on it. An **HTML form** is a flat
-list of name/value pairs. This document is the bridge between them: how a
-questionnaire becomes a page, how the page's `POST` becomes a
-**QuestionnaireResponse**, and every decision and corner case in that mapping.
+Questionnaire is the semantic model: it defines items, types, repetition,
+terminology, constraints and reactive rules. QuestionnaireResponse is the result
+model: it records typed answers in the same tree.
 
-It is written to be usable without our renderer — a page with its own markup can
-post the same names and get the same answer — and to work with no JavaScript at
-all, because a clinical form that stops working when a script fails is not a form.
+HTML is the presentation model. It is deliberately not stored inside the
+Questionnaire and is not limited to the controls or layouts a generic SDC
+renderer understands.
 
-## The problem
+## The bridge
 
-The two shapes do not line up, and every difference between them is somewhere a
-form loses data:
+The presentation layer binds the three representations:
 
-| a Questionnaire has | an HTML form has |
-|---|---|
-| a tree of items, nested and repeatable | one flat list of names |
-| a type per question, and typed answers (`valueQuantity`, `valueCoding`) | strings |
-| codes that say what a question means | nothing of the kind |
-| units, ranges, skip logic, calculations | `required`, `min`, `max`, and a browser's goodwill |
-| answers that mirror the tree | pairs, in whatever order the browser felt like |
+```text
+Questionnaire item tree
+        ↕ item paths and behavior
+HTML widgets and successful controls
+        ↕ collection and type binding
+QuestionnaireResponse answer tree
+```
 
-And the browser has its own facts that no specification can argue with: an
-unchecked checkbox posts nothing at all, a file input cannot be refilled by the
-server, `datetime-local` has no offset, an empty field is indistinguishable from a
-missing one unless somebody decides what that means.
+The binding is bidirectional. A form must be able to display an existing response
+and its entry list must be collectable into an equivalent response for every
+answer the form permits a user to change.
 
-So the bridge has to answer four questions, and the rest of this document is those
-four answers: **what a field is called**, **what the body means**, **what comes
-back**, and **who decides** when the two disagree.
+## No second UI schema
 
-## What is being bridged
+The layer does not introduce JSON components, screen definitions or another form
+resource. HTML itself is the representation. The specification defines only the
+conventions needed to connect that representation to FHIR:
 
-### The definition
+- canonical names address Questionnaire items, occurrences and value components;
+- successful-control rules define what the browser actually submits;
+- type binding turns lexical HTML values into FHIR `value[x]` answers;
+- reactive behavior preserves `enableWhen`, calculated and read-only semantics;
+- conformance checks compare the form with its Questionnaire.
 
-A Questionnaire is a recursive tree of `item`. Every node has a **`linkId`**
-(unique in the form — its address), a **`type`**, and usually **`text`** (what a
-person reads). `group` holds children and carries no answer; `display` is a
-paragraph; everything else is answerable, and the answer mirrors the tree —
-`QuestionnaireResponse.item[]` with the same linkIds.
+SDC rendering extensions remain useful hints for generic renderers. A bespoke
+form may express a richer interface directly in HTML without extending the
+Questionnaire merely to describe its visual implementation.
 
-Beside the type sits **`code`**, and it is a different coordinate system
-altogether:
+## Conforming rendering
 
-| | says |
-|---|---|
-| `type` | what the answer looks like — a number, a date, a choice |
-| `linkId` | where the answer goes in this form |
-| `item.code` | what the question **means** — LOINC, SNOMED. This is what makes a form a source of records rather than a document |
-| `answerOption.valueCoding` / `answerValueSet` | the vocabulary of the **answers**, not of the question |
-| `Questionnaire.code` | what the whole form is about |
+A page is a rendering of a Questionnaire when:
 
-A form with no codes is perfectly valid. It is a document: the answers make sense
-next to it and nowhere else.
+- every answer it can submit resolves to an item in that Questionnaire;
+- every enabled answerable item it claims to support can be represented;
+- values, ancestry and repetition follow the Questionnaire definition;
+- disabled and server-owned values cannot become trusted user answers;
+- dynamic behavior has the same result whether executed in the browser or on the
+  server;
+- collecting its entries produces the expected QuestionnaireResponse.
 
-### The types
+DOM shape and visual layout are not compared. Two completely different pages may
+be equivalent renderings when they expose the same answer capabilities and
+preserve the same semantics.
 
-`group`, `display`, and then: `boolean`, `decimal`, `integer`, `date`, `dateTime`,
-`time`, `string`, `text`, `url`, `choice`, `open-choice`, `quantity`,
-`attachment`, `reference`.
+## Terms
 
-Two that surprise people: `string` and `text` differ **only in how they are
-typed** — both produce `valueString`, so this is the one place where the type
-encodes layout rather than meaning. And in **R5 `choice`/`open-choice` are gone**,
-replaced by one `coding` type plus `answerConstraint` (`optionsOnly` ·
-`optionsOrType` · `optionsOrString`) — which is the more honest model: "pick, or
-write your own" is a constraint, not a different kind of answer.
+**Item path** identifies a Questionnaire item through its ancestors.
 
-### The answer
+**Occurrence** selects one answer or repeated group instance.
 
-A QuestionnaireResponse mirrors the questionnaire: `item[]` with the same
-`linkId`s, nested the same way, each answerable item carrying `answer[]` and each
-answer one of a dozen `value[x]`. A repeating group appears once per repetition,
-in order; items that hang off a particular answer sit inside it. Nothing in the
-response says how it was collected — which is the point, and also why the mapping
-below has to be exact.
+**Component** selects part of a complex FHIR value such as `Quantity.value` or
+`Coding.code`.
 
+**Widget** is one visual answer control. A widget may contain several HTML
+controls while representing one FHIR value.
+
+**Entry list** is the ordered sequence of `(name, value)` pairs produced by HTML
+form submission.
+
+**Binding kernel** is the shared path resolver, type registry and rule semantics
+used by every presentation-layer component.

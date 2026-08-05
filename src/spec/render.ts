@@ -4,14 +4,17 @@ type Page = { id: string; file: string; label: string };
 
 const LABELS: Record<string, string> = {
     index: "Overview",
-    concepts: "Concepts",
+    concepts: "Presentation layer",
+    components: "Components",
     "field-names": "Field names",
-    types: "FHIR types",
-    "collect-and-render": "Collect & render",
+    "entry-list": "Form entry list",
+    types: "FHIR type binding",
+    rendering: "Rendering",
     exchange: "Exchange",
-    expressions: "Expressions",
+    expressions: "Reactive runtime",
     extraction: "Extraction",
-    parser: "Parser",
+    parser: "Collector & validation",
+    linter: "Form linter",
     conformance: "Conformance",
     decisions: "Decisions",
     "open-questions": "Open questions",
@@ -19,10 +22,24 @@ const LABELS: Record<string, string> = {
     compatibility: "Compatibility index",
 };
 
+const NAVIGATION = [
+    { label: "Start", ids: ["index", "concepts", "components"] },
+    { label: "HTML contract", ids: ["rendering", "field-names", "entry-list", "types"] },
+    { label: "Runtime components", ids: ["parser", "linter", "expressions"] },
+    { label: "Protocol", ids: ["exchange"] },
+    { label: "Output", ids: ["extraction", "conformance"] },
+    { label: "Examples", ids: ["examples/blood-pressure", "examples/phq9", "examples/diagnosis"] },
+    { label: "Design notes", ids: ["decisions", "open-questions", "prior-art", "compatibility"] },
+];
+
+const ALIASES: Record<string, string> = {
+    "collect-and-render": "rendering",
+};
+
 export default async function (ctx: Context, _session: Session | null, opts: { page?: string }) {
     const root = ctx.fns.project.projectRoot({});
     const pages = pagesAt(root);
-    const requested = opts.page ?? "index";
+    const requested = ALIASES[opts.page ?? "index"] ?? opts.page ?? "index";
     const page = pages.find(candidate => candidate.id === requested) ?? pages[0]!;
     const markdown = await Bun.file(resolve(root, page.file)).text();
     const raw = Bun.markdown.html(markdown, { headings: true });
@@ -33,7 +50,7 @@ export default async function (ctx: Context, _session: Session | null, opts: { p
   <aside class="lg:sticky lg:top-24 lg:self-start">
     <p class="mb-3 font-mono text-[.68rem] font-medium uppercase tracking-[.14em] text-teal">Specification</p>
     <nav class="flex gap-2 overflow-x-auto pb-2 lg:block lg:max-h-[calc(100vh-8rem)] lg:space-y-1 lg:overflow-y-auto" aria-label="Specification sections">
-      ${pages.map(candidate => navLink(candidate, candidate.id === page.id)).join("\n")}
+      ${renderNavigation(pages, page.id)}
     </nav>
   </aside>
   <article class="min-w-0 overflow-hidden rounded-[18px] border border-line bg-surface/95 shadow-card">
@@ -53,12 +70,27 @@ function pagesAt(root: string): Page[] {
         { id: "prior-art", file: "prior-art.md", label: "Prior art" },
         { id: "compatibility", file: "spec.md", label: "Compatibility index" },
     ];
-    const order = Object.keys(LABELS);
+    const order = NAVIGATION.flatMap(section => section.ids);
     return [...core, ...examples, ...extras].sort((a, b) => {
         const ai = order.indexOf(a.id);
         const bi = order.indexOf(b.id);
         return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi) || a.id.localeCompare(b.id);
     });
+}
+
+function renderNavigation(pages: Page[], activeId: string): string {
+    const byId = new Map(pages.map(candidate => [candidate.id, candidate]));
+    const listed = new Set(NAVIGATION.flatMap(section => section.ids));
+    const sections = NAVIGATION.map(section => ({
+        ...section,
+        pages: section.ids.map(id => byId.get(id)).filter((page): page is Page => Boolean(page)),
+    }));
+    const remaining = pages.filter(page => !listed.has(page.id));
+    if (remaining.length > 0) sections.push({ label: "More", ids: [], pages: remaining });
+    return sections.filter(section => section.pages.length > 0).map(section => `<div class="contents lg:block lg:pb-4">
+  <p class="hidden px-3 pb-1 pt-2 font-mono text-[.58rem] font-semibold uppercase tracking-[.14em] text-muted lg:block">${escapeHtml(section.label)}</p>
+  <div class="contents lg:block lg:space-y-1">${section.pages.map(page => navLink(page, page.id === activeId)).join("\n")}</div>
+</div>`).join("\n");
 }
 
 function page(file: string): Page {
