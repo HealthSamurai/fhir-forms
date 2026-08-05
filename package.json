@@ -1,0 +1,36 @@
+{
+  "name": "fhir-forms",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "module": "src/$main.ts",
+  "scripts": {
+    "start": "./procx start",
+    "repl": "./procx repl",
+    "css:build": "./procx repl 'ctx.fns.tailwind.build({})'",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "proc": {
+    "prod": {
+      "log": {},
+      "repl": {},
+      "tailwind": {},
+      "http": {
+        "port": 57571
+      }
+    },
+    "plugins": []
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/typography": "^0.5.20",
+    "prettier": "^3.9.6",
+    "shiki": "^4.4.2",
+    "tailwindcss": "^4.3.3"
+  }
+}

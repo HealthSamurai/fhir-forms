@@ -1,0 +1,62 @@
+// Per-ctx state. Framework-owned keys are typed here; app/plugin state uses the
+// index signature, OR a typed slot declared via a `$state_<key>.ts` file (which
+// genTypes merges into this global interface). The registry is here (the ctx.fns
+// Proxy reads it), so a derived ctx (request / env.fork) carrying its own state
+// stays self-consistent.
+declare global {
+    // Config schema (context-clj style): per-param type + rules. A module declares
+    // one in `module/$config.ts`; ctx.fns.config.resolve coerces + validates the
+    // values that come from package.json proc.prod.<module> and env vars.
+    type ConfigParam = {
+        type: "string" | "string[]" | "integer" | "number" | "boolean" | "map";
+        required?: boolean;
+        default?: any;
+        env?: string;            // explicit env var name (default: <MODULE>__<KEY>)
+        sensitive?: boolean;
+        validator?: (v: any) => boolean;
+    };
+    type ConfigSchema = Record<string, ConfigParam>;
+    type ConfigValue<T> =
+        T extends "string" ? string :
+        T extends "string[]" ? string[] :
+        T extends "integer" | "number" ? number :
+        T extends "boolean" ? boolean :
+        T extends "map" ? Record<string, any> : unknown;
+    // Derives the typed config object from a schema: ConfigOf<typeof schema>.
+    type ConfigOf<S extends ConfigSchema> = { [K in keyof S]: ConfigValue<S[K]["type"]> };
+
+    interface CtxState {
+        registry: Record<string, any>;
+        root?: string;              // project/app root (package.json + src live here)
+        serverStart?: number;
+        server?: { server: any; port: number };
+        http?: { logFile: any };
+        events?: { subs: Set<(e: any) => void> };
+        middleware?: Array<{ prefix: string; segs: string[]; handler: Function }>;
+        lifecycle?: { started: string[] };
+        configSchemas?: Record<string, ConfigSchema>;
+        hooks?: Record<string, Map<string, Function>>;
+        migrations?: Array<{ id: string; up: Function; down?: Function }>;
+        cli?: Record<string, Function>;
+        dev?: { errors: Map<string, string> };
+        watcher?: any;
+        db?: import("bun:sqlite").Database;
+        [key: string]: any;
+    }
+}
+
+// Every function in the project has the signature:
+//     export default async function (ctx: Context, session: Session, opts: {...}) {...}
+// When called through ctx.fns.* / ctx.<rootFn>, `ctx` and `session` are
+// injected implicitly — callers pass only opts:
+//     ctx.fns.notes.add({ text: "hi" })
+// Raw functions live in ctx.state.registry; ctx.fns is an injecting Proxy
+// (see $main.ts makeCtx). Per-request ctx = makeRequestCtx(rootCtx, session),
+// so the session flows through the whole call chain automatically.
+export type Context = RootFns & {
+    env: Record<string, string | undefined>;
+    state: CtxState;
+    routes: Record<string, Record<string, Function>>;
+    session: Session | null;
+    fns: FnsRegistry;
+};

@@ -1,0 +1,118 @@
+import { basename, dirname } from "node:path";
+
+const METHODS = new Set(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]);
+
+// A moduleDir ("." at the src root) → its path/namespace segments. ONE place for
+// the "." special case (reused by lint, which nests the same way).
+export const segments = (moduleDir: string): string[] => moduleDir === '.' ? [] : moduleDir.split('/');
+
+// Build a URL path from a moduleDir + extra parts: join, drop empties, and turn
+// a leading-`$` segment into a `:param`. Shared by the route and middleware
+// branches so route paths and middleware prefixes parse identically.
+const toPath = (moduleDir: string, parts: string[]): string =>
+    '/' + [...segments(moduleDir), ...parts].filter(Boolean).map(s => s.startsWith('$') ? ':' + s.slice(1) : s).join('/');
+
+export type ProjectEntry =
+    | { kind: "fn"; rel: string; moduleDir: string; fileName: string; runtimeName: string }
+    | { kind: "type"; rel: string; moduleDir: string; fileName: string; typeName: string }
+    | { kind: "route"; rel: string; moduleDir: string; fileName: string; routePath: string; method: string }
+    | { kind: "script"; rel: string; moduleDir: string; fileName: string; routePath: string }
+    | { kind: "middleware"; rel: string; moduleDir: string; fileName: string; prefix: string }
+    | { kind: "state"; rel: string; moduleDir: string; fileName: string; stateKey: string }
+    | { kind: "lifecycle"; rel: string; moduleDir: string; fileName: string; hook: "start" | "stop" }
+    | { kind: "config"; rel: string; moduleDir: string; fileName: string }
+    | { kind: "hook"; rel: string; moduleDir: string; fileName: string; hookName: string }
+    | { kind: "migration"; rel: string; moduleDir: string; fileName: string; migrationId: string }
+    | { kind: "cli"; rel: string; moduleDir: string; fileName: string; command: string }
+    | { kind: "skip"; rel: string; moduleDir: string; fileName: string; reason: string };
+
+export default function (_ctx: Context, _session: Session | null, opts: { rel: string }): ProjectEntry {
+    const rel = opts.rel;
+    const moduleDir = dirname(rel);
+    const fileName = basename(rel);
+
+    if (/^\$script_.+\.(js|mjs|css)$/.test(fileName)) {
+        const m = /^\$script_(.+?)(\.\w+)$/.exec(fileName);
+        if (!m || !m[1] || !m[2]) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-script-name' };
+        return { kind: 'script', rel, moduleDir, fileName, routePath: '/' + [...segments(moduleDir), m[1] + m[2]].join('/') };
+    }
+
+    if (rel.endsWith('.d.ts')) return { kind: 'skip', rel, moduleDir, fileName, reason: 'dts' };
+    if (rel.endsWith('.test.ts')) return { kind: 'skip', rel, moduleDir, fileName, reason: 'test' };
+    if (rel.endsWith('.entry.ts')) return { kind: 'skip', rel, moduleDir, fileName, reason: 'entry' };
+    if (!rel.endsWith('.ts')) return { kind: 'skip', rel, moduleDir, fileName, reason: 'non-ts' };
+
+    const stem = basename(rel, '.ts');
+    if (stem === '$main' || stem === '$test') return { kind: 'skip', rel, moduleDir, fileName, reason: 'reserved' };
+
+    if (stem.startsWith('$type_')) {
+        const typeName = stem.slice('$type_'.length);
+        if (!typeName) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-type-name' };
+        return { kind: 'type', rel, moduleDir, fileName, typeName };
+    }
+
+    if (stem.startsWith('$route_')) {
+        const rest = stem.slice('$route_'.length);
+        const idx = rest.lastIndexOf('_');
+        const pathRaw = idx === -1 ? '' : rest.slice(0, idx);
+        const method = idx === -1 ? rest : rest.slice(idx + 1);
+        if (!METHODS.has(method)) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-route-method' };
+        const pathParts = pathRaw === '' ? [] : pathRaw.split('_');
+        return { kind: 'route', rel, moduleDir, fileName, routePath: toPath(moduleDir, pathParts), method };
+    }
+
+    // $middleware[_<path>].ts → runs before handlers under its path prefix; may
+    // mutate the session. Bare $middleware.ts → the whole module path; the _<path>
+    // suffix extends it (_ → /, $id → :id wildcard segment).
+    if (stem === '$middleware' || stem.startsWith('$middleware_')) {
+        const rest = stem === '$middleware' ? '' : stem.slice('$middleware_'.length);
+        const pathParts = rest === '' ? [] : rest.split('_');
+        return { kind: 'middleware', rel, moduleDir, fileName, prefix: toPath(moduleDir, pathParts) };
+    }
+
+    // $state_<key>.ts → declares the type of ctx.state.<key> (the file exports
+    // `type <key>`). Types only; the value is set at runtime by fns/middleware.
+    if (stem.startsWith('$state_')) {
+        const stateKey = stem.slice('$state_'.length);
+        if (!stateKey) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-state-name' };
+        return { kind: 'state', rel, moduleDir, fileName, stateKey };
+    }
+
+    // $start.ts / $stop.ts → module lifecycle hooks (init / teardown of ctx),
+    // run by ctx.fns.lifecycle.* in the order declared in package.json proc.prod.
+    if (stem === '$start' || stem === '$stop') {
+        return { kind: 'lifecycle', rel, moduleDir, fileName, hook: stem.slice(1) as 'start' | 'stop' };
+    }
+
+    // $config.ts → a module's config schema (default-exports a ConfigSchema).
+    // Collected into ctx.state.configSchemas; modules never import it — they
+    // read config via ctx.fns.config.resolve({ module }).
+    if (stem === '$config') return { kind: 'config', rel, moduleDir, fileName };
+
+    // $hook_<name>.ts → a named extension point handler, auto-registered under
+    // <name> (id = module). Run via ctx.fns.hooks.run/first({ name }).
+    if (stem.startsWith('$hook_')) {
+        const hookName = stem.slice('$hook_'.length);
+        if (!hookName) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-hook-name' };
+        return { kind: 'hook', rel, moduleDir, fileName, hookName };
+    }
+
+    // $migration_<id>.ts → a db migration (default-exports { up, down? }); run in
+    // id order by ctx.fns.migrate.up, tracked in the _migrations table.
+    if (stem.startsWith('$migration_')) {
+        const migrationId = stem.slice('$migration_'.length);
+        if (!migrationId) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-migration-name' };
+        return { kind: 'migration', rel, moduleDir, fileName, migrationId };
+    }
+
+    // $cli_<command>.ts → a CLI command (default fn (ctx, session, opts)); `_`
+    // becomes `:` (e.g. $cli_db_seed.ts → `db:seed`). Run by ctx.fns.cli.run.
+    if (stem.startsWith('$cli_')) {
+        const command = stem.slice('$cli_'.length).replaceAll('_', ':');
+        if (!command) return { kind: 'skip', rel, moduleDir, fileName, reason: 'bad-cli-name' };
+        return { kind: 'cli', rel, moduleDir, fileName, command };
+    }
+
+    const runtimeName = stem.startsWith('$') ? stem.slice(1) : stem;
+    return { kind: 'fn', rel, moduleDir, fileName, runtimeName };
+}

@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@source "../";
+
+@theme {
+  --font-sans: "Instrument Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --color-ink: #17211d;
+  --color-muted: #66716b;
+  --color-paper: #f7f3e9;
+  --color-surface: #fffdf7;
+  --color-line: #d9d4c7;
+  --color-teal: #0b6b5d;
+  --color-teal-dark: #074d44;
+  --color-teal-soft: #dceee8;
+  --color-coral: #d85c41;
+  --color-coral-soft: #f8dfd7;
+  --color-code: #e9e4d7;
+  --shadow-card: 0 18px 55px rgba(42, 55, 48, 0.1);
+  --animate-rise: rise 0.5s ease-out both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  html { min-height: 100%; background: var(--color-paper); }
+  body {
+    min-height: 100vh;
+    margin: 0;
+    color: var(--color-ink);
+    background:
+      radial-gradient(circle at 8% 10%, rgba(11, 107, 93, 0.12), transparent 28rem),
+      radial-gradient(circle at 92% 2%, rgba(216, 92, 65, 0.11), transparent 24rem),
+      linear-gradient(rgba(23, 33, 29, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23, 33, 29, 0.025) 1px, transparent 1px),
+      var(--color-paper);
+    background-size: auto, auto, 24px 24px, 24px 24px, auto;
+    font-family: var(--font-sans);
+  }
+  button, input, select, textarea { font: inherit; }
+  code, pre { font-family: var(--font-mono); }
+  ::selection { color: var(--color-ink); background: var(--color-coral-soft); }
+}
+
+@layer components {
+  .ifta-field {
+    border: 1px solid rgba(23, 33, 29, 0.22);
+  }
+  .ifta-grid {
+    gap: 1px;
+    border: 0;
+    background: rgba(23, 33, 29, 0.22);
+  }
+  .ifta-grid > .ifta-field {
+    border: 0;
+  }
+  .ifta-form-body > .ifta-field {
+    border: 0;
+  }
+  .ifta-group > legend {
+    width: auto;
+    padding: 0 0.25rem;
+    border: 0;
+    color: #5f6863;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .ifta-group {
+    border: 0;
+  }
+  .ifta-group-body {
+    min-width: 0;
+  }
+  .ifta-group-shell {
+    margin-top: 0.5rem;
+  }
+  .ifta-group-body > .ifta-field {
+    border: 0;
+    border-top: 1px solid rgba(23, 33, 29, 0.18);
+    border-bottom: 1px solid rgba(23, 33, 29, 0.18);
+  }
+  .ifta-group + .ifta-group {
+    margin-top: 1rem;
+  }
+  .ifta-group-body > .ifta-group-nested {
+    margin: 0.75rem;
+    border: 0;
+    background: transparent;
+  }
+  .ifta-group-body > .ifta-group-nested + .ifta-group-nested {
+    margin-top: 1rem;
+  }
+  .ifta-group-nested > legend {
+    margin-left: 0;
+    padding: 0 0.25rem;
+    background: transparent;
+  }
+  .ifta-group-shell-nested {
+    border-radius: 4px;
+  }
+  form > .ifta-group:first-of-type {
+    margin-top: 0.35rem;
+  }
+  .ifta-field:focus-within {
+    position: relative;
+    z-index: 1;
+    background: #ffffff;
+    outline: 2px solid var(--color-teal);
+    outline-offset: -2px;
+  }
+  .example-tab-toggle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .example-tab-toggle:checked + .example-tab-label {
+    border-color: #c9dcd6;
+    color: var(--color-teal-dark);
+    background: var(--color-teal-soft);
+  }
+  .example-tab-toggle:focus-visible + .example-tab-label {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+  .example-tab-panel { display: none; }
+  .example-tab-toggle[data-tab="form"]:checked ~ .example-tab-panels .example-panel-form,
+  .example-tab-toggle[data-tab="html"]:checked ~ .example-tab-panels .example-panel-html,
+  .example-tab-toggle[data-tab="response"]:checked ~ .example-tab-panels .example-panel-response { display: block; }
+  .example-code .shiki,
+  .result .shiki {
+    max-height: 28rem;
+    margin: 0 !important;
+    padding: 1rem !important;
+    overflow: auto;
+    text-align: left !important;
+    tab-size: 2;
+  }
+  .example-code .shiki code,
+  .result .shiki code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    text-align: left !important;
+    white-space: pre;
+  }
+  .htmx-request button { cursor: wait; opacity: 0.55; }
+  .spec-prose .shiki {
+    overflow-x: auto;
+    text-align: left;
+  }
+  .spec-prose .shiki code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    color: inherit;
+    background: transparent;
+    font-weight: 400;
+    text-align: left;
+    white-space: pre;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

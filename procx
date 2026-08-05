@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+case "${1:-}" in
+  start) shift; exec bun 'src/$main.ts' "$@" ;;
+  repl) shift; exec bun script/repl.ts "$@" ;;
+  port) cat .runtime/port ;;
+  *) printf '%s\n' 'usage: ./procx start | repl <code|-f file> | port' >&2; exit 2 ;;
+esac

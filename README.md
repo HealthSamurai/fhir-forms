@@ -1,20 +1,17 @@
 # fhir-forms
 
-A bridge between HTML forms and FHIR Questionnaire — written so that a page with
-its own markup, a test, or somebody else's UI can produce the same
-QuestionnaireResponse as our renderer, with no client-side runtime required.
+A bridge between ordinary HTML forms and FHIR Questionnaire. A page with its own
+markup, a test, an agent, or another UI can produce the same
+QuestionnaireResponse as the renderer, without requiring a client-side runtime.
 
-- [`spec.md`](spec.md) — the design. What a field is called, every `item.type` end
-  to end, how a page is rendered, the exchange, the collect algorithm, how skip
-  logic and formulas reach the browser; worked examples (blood pressure, a PHQ-9
-  score, a diagnosis from ICD-10); and the register of corner cases, numbered
-  decisions, open questions and what is specified but not built.
-- [`prior-art.md`](prior-art.md) — who has solved parts of this before (Rails and
-  the bracket tradition, W3C HTML JSON Forms, schema-driven form generators,
-  XForms and Orbeon, the FHIR renderers, htmx, Datastar), what to take from each,
-  and what stays ours.
+- [Specification index](docs/index.md): the normative protocol and reading order.
+- [Field names](docs/field-names.md): the public wire grammar.
+- [Types](docs/types.md): every Questionnaire item type end to end.
+- [Collect and render](docs/collect-and-render.md): inverse algorithms.
+- [Examples](docs/examples/blood-pressure.md): blood pressure, PHQ-9, and diagnosis.
+- [Decisions](docs/decisions.md) and [open questions](docs/open-questions.md).
+- [Prior art](prior-art.md): related form systems and lessons.
 
-It grew out of building clinical screens on Aidbox/FHIR, where the same form has
-to be answered in a clinician's chart and in a patient's portal, and where the
-answer has to become a measurement in the record rather than a document nobody
-reads.
+The design grew out of clinical screens on Aidbox/FHIR, where the same form must
+work in a clinician chart and a patient portal, and where answers should become
+useful clinical records rather than unread documents.

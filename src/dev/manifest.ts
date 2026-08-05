@@ -1,0 +1,119 @@
+// Build-time equivalent of loadFns/loadRoutes. proc's dev mode discovers the
+// registry at runtime via scan() + dynamic import(abs+'?t=...') — un-bundleable
+// by design (that's what powers hot-reload). This freezes that discovered
+// namespace into an EXPLICIT static import graph the bundler can follow, so
+// Bun.build can collapse every module into one file.
+//   ctx.fns.dev.manifest({ out: ".runtime/build/manifest.ts" })
+import { resolve, relative } from "node:path";
+import { setPath } from "../loadFns";
+
+export default async function (ctx: Context, _session: Session | null, opts?: { out?: string }) {
+    const entries = await ctx.fns.project.scan({});
+    const out = opts?.out ?? ".runtime/build/manifest.ts";
+    // Import paths are relative to the generated file (.runtime/build/manifest.ts)
+    // from the REAL file (entry.abs) — so plugin files (in node_modules / outside
+    // src/) are bundled too.
+    const buildDir = resolve(out, "..");
+    const rel = (abs: string) => {
+        let p = relative(buildDir, abs).replace(/\.ts$/, "");
+        return p.startsWith(".") ? p : "./" + p;
+    };
+
+    const imports: string[] = [];
+    const reg: any = {};                          // nested registry: namespace=object, fn leaf=local var name (a string)
+    let fnCount = 0;
+    const rootFns: Record<string, string> = {};
+    const routeDefs: string[] = [];
+    const middlewareDefs: string[] = [];
+    const lifecycleDefs: string[] = [];
+    const configSchemas: string[] = [];
+    const hookDefs: string[] = [];
+    const migrationDefs: string[] = [];
+    const cliDefs: string[] = [];
+    let n = 0;
+
+    for (const e of entries) {
+        if (e.kind === "fn") {
+            const local = "f" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            if (e.moduleDir === ".") rootFns[e.runtimeName] = local;
+            else { setPath(reg, [...e.moduleDir.split("/"), e.runtimeName], local); fnCount++; } // reuse loadFns' nesting
+        } else if (e.kind === "route") {
+            const local = "r" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            routeDefs.push(`  { method: ${JSON.stringify(e.method)}, path: ${JSON.stringify(e.routePath)}, handler: ${local} },`);
+        } else if (e.kind === "middleware") {
+            const local = "m" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            middlewareDefs.push(`  { prefix: ${JSON.stringify(e.prefix)}, handler: ${local} },`);
+        } else if (e.kind === "lifecycle") {
+            const local = "l" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            lifecycleDefs.push(`  { module: ${JSON.stringify(e.moduleDir)}, hook: ${JSON.stringify(e.hook)}, handler: ${local} },`);
+        } else if (e.kind === "config") {
+            const local = "c" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            configSchemas.push(`  ${JSON.stringify(e.moduleDir)}: ${local},`);
+        } else if (e.kind === "hook") {
+            const local = "h" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            hookDefs.push(`  { name: ${JSON.stringify(e.hookName)}, id: ${JSON.stringify(e.moduleDir)}, handler: ${local} },`);
+        } else if (e.kind === "migration") {
+            const local = "mg" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            migrationDefs.push(`  { id: ${JSON.stringify(e.migrationId)}, mod: ${local} },`);
+        } else if (e.kind === "cli") {
+            const local = "cmd" + (n++);
+            imports.push(`import ${local} from "${rel(e.abs)}";`);
+            cliDefs.push(`  ${JSON.stringify(e.command)}: ${local},`);
+        }
+        // $type_/$state_ → types only, irrelevant at runtime; $script_ → Later (pre-bundle assets)
+    }
+    const startOrder = await ctx.fns.lifecycle.order({});
+
+    // Emit the registry literal: a string leaf is a fn (its local import name,
+    // emitted unquoted), an object is a nested namespace. Local names are f0/f1/…
+    // so a fn and a namespace can never be confused (the old {__local} sentinel
+    // broke on a fn literally named "__local").
+    const emit = (o: any, ind = "  "): string =>
+        Object.entries(o).map(([k, v]: any) =>
+            typeof v === "string" ? `${ind}${JSON.stringify(k)}: ${v},`
+                : `${ind}${JSON.stringify(k)}: {\n${emit(v, ind + "  ")}\n${ind}},`
+        ).join("\n");
+    const emitRoot = Object.entries(rootFns).map(([k, l]) => `  ${JSON.stringify(k)}: ${l},`).join("\n");
+
+    const src = `// AUTO-GENERATED build manifest — do not edit
+${imports.join("\n")}
+
+export const registry: any = {
+${emit(reg)}
+};
+export const rootFns: any = {
+${emitRoot}
+};
+export const routeDefs: any[] = [
+${routeDefs.join("\n")}
+];
+export const middlewareDefs: any[] = [
+${middlewareDefs.join("\n")}
+];
+export const lifecycleDefs: any[] = [
+${lifecycleDefs.join("\n")}
+];
+export const startOrder: string[] = ${JSON.stringify(startOrder)};
+export const configSchemas: any = {
+${configSchemas.join("\n")}
+};
+export const hookDefs: any[] = [
+${hookDefs.join("\n")}
+];
+export const migrationDefs: any[] = [
+${migrationDefs.join("\n")}
+];
+export const cliDefs: any = {
+${cliDefs.join("\n")}
+};
+`;
+    await Bun.write(out, src);
+    return { out, fns: fnCount, rootFns: Object.keys(rootFns).length, routes: routeDefs.length };
+}
