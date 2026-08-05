@@ -4,6 +4,78 @@ FHIR Questionnaire and SDC describe clinical meaning, answer types, constraints
 and a portable set of rendering hints. They do not attempt to encode every
 possible user interface.
 
+## Why this specification exists
+
+The primary use case is not generating a default form. It is building an
+intentionally designed, application-grade interface while continuing to use a
+FHIR Questionnaire as the source of truth. The interface may be dense,
+responsive, brand-specific and highly interactive, but its questions, answer
+types, constraints and resulting QuestionnaireResponse should still follow the
+Questionnaire.
+
+A conventional Questionnaire renderer starts from the item tree and chooses a
+generic widget for each item type. It can apply a theme and a portable set of SDC
+rendering hints, but it can only render presentation decisions that the
+Questionnaire actually contains. It cannot infer a designer's intent, such as:
+
+- presenting a decimal and its unit as one compound quantity input;
+- placing systolic and diastolic pressure on the same row while arranging other
+  observations in a responsive grid;
+- making repeated diagnoses look like rows in a compact paper form;
+- composing several Questionnaire items into one application-specific widget;
+- changing navigation, disclosure and interaction patterns for desktop and
+  mobile workflows.
+
+These decisions are deliberately outside the core Questionnaire semantic model.
+A renderer can support them through proprietary extensions, templates or custom
+components, but then the form becomes specific to that renderer. Another
+implementation cannot reliably reproduce the presentation, and custom HTML no
+longer has a standard way to prove that it still represents the Questionnaire.
+
+Questionnaire is therefore a strong semantic model, but not a complete UI model.
+SDC adds portable behavior and rendering guidance, yet it does not attempt to be
+a general-purpose HTML layout and interaction language. Real clinical forms
+routinely need presentation beyond those hints: dense paper-like layouts,
+compound widgets, responsive columns, inline units, custom navigation,
+progressive disclosure and application-specific interactions.
+
+Without a standard boundary between those semantics and the rendered interface,
+implementers usually have to choose one of three compromises:
+
+- restrict the interface to what a particular Questionnaire renderer supports;
+- introduce a proprietary UI schema alongside the Questionnaire and duplicate
+  paths, constraints and behavior across both models;
+- bind custom HTML to application-specific extraction code that cannot be
+  inspected, linted or reused by another implementation.
+
+All three approaches weaken portability. The Questionnaire may remain formally
+standard, while the form that users actually interact with becomes coupled to a
+renderer, framework or backend.
+
+This specification defines the missing presentation boundary. It treats HTML as
+the presentation language and introduces a small, observable binding contract
+between Questionnaire items, successful HTML form entries and
+QuestionnaireResponse items. The contract makes it possible to ask and answer a
+precise question: **is this arbitrary HTML form a valid rendering of this FHIR
+Questionnaire?**
+
+The goal is to preserve both sides of that boundary:
+
+- the Questionnaire remains the source of clinical meaning, types and
+  constraints;
+- the HTML remains free to use any layout, design system, server framework or
+  client runtime;
+- a conforming Collector can reconstruct and validate the same
+  QuestionnaireResponse independently of the renderer;
+- a Form Linter can detect structural gaps before the form reaches a user;
+- dynamic behavior can run as compiled client JavaScript, server re-rendering or
+  a combination of both without changing the submission contract.
+
+This is not a replacement for Questionnaire or SDC, and it is deliberately not
+another universal UI schema. It does not prescribe CSS, DOM structure or a
+JavaScript framework. It standardizes only the binding surface that must remain
+stable when presentation and execution strategies change.
+
 This specification adds an HTML presentation layer without adding another UI
 schema:
 
