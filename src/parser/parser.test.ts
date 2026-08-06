@@ -145,4 +145,29 @@ describe("QuestionnaireResponse parser", () => {
         expect(result.ok).toBe(false);
         if (!result.ok) expect(result.issues.map((issue: any) => issue.code)).toContain("cardinality.duplicate-field");
     });
+
+    test("materializes open-choice text from the canonical text component", async () => {
+        const questionnaire = {
+            resourceType: "Questionnaire",
+            id: "open-choice",
+            status: "active",
+            item: [{ linkId: "answer", type: "open-choice", repeats: true }],
+        };
+        const result = await ctx.fns.parser.parse({
+            questionnaire,
+            entries: [
+                ["item[answer][0].text", "Something else"],
+                ["item[answer][1].system", "http://loinc.org"],
+                ["item[answer][1].code", "LA6568-5"],
+            ],
+        });
+
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+            expect(result.response.item[0].answer).toEqual([
+                { valueString: "Something else" },
+                { valueCoding: { system: "http://loinc.org", code: "LA6568-5" } },
+            ]);
+        }
+    });
 });

@@ -10,6 +10,7 @@ produce the same typed QuestionnaireResponse.
 - [Field-path grammar](docs/field-names.md)
 - [HTML entry-list semantics](docs/entry-list.md)
 - [FHIR type binding](docs/types.md)
+- [Scaffold generator](docs/generator.md)
 - [Collector and validation](docs/parser.md)
 - [Form linter](docs/linter.md)
 - [Reactive runtime](docs/expressions.md)

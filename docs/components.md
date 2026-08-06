@@ -57,6 +57,22 @@ The runtime resolves dependencies and executes enablement and calculations. A
 supported local rule may compile to client JavaScript; a server-dependent rule
 causes a recompute request. Both use the same server evaluator as their reference.
 
+## Scaffold Generator
+
+```ts
+generate({ questionnaire, options })
+  -> { html, warnings }
+```
+
+The generator bootstraps editable HTML with canonical paths, semantic controls
+and explicit warnings for behavior that requires project decisions. Its output
+is source code, not a runtime-owned render tree. Once generated, a developer or
+agent may change layout and widgets freely while preserving the binding
+contract.
+
+The file writer refuses to overwrite an existing scaffold unless replacement is
+explicit. This prevents regeneration from destroying bespoke presentation work.
+
 ## Renderer
 
 ```ts
@@ -73,6 +89,7 @@ equally conforming when the linter and collector observe the same contract.
 Questionnaire + HTML ───────────────→ Form Linter
 Questionnaire + entry list ─────────→ Collector ─→ QuestionnaireResponse
 Questionnaire rules ────────────────→ Reactive Runtime ─→ HTML state
+Questionnaire ──────────────────────→ Scaffold Generator ─→ editable HTML source
 Questionnaire + optional response ──→ Renderer ─→ HTML
 ```
 

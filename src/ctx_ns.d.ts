@@ -38,21 +38,31 @@ declare global {
             card: Injected<typeof import("./examples/card").default>;
             caseIds: Injected<typeof import("./examples/caseIds").default>;
             catalog: Injected<typeof import("./examples/catalog").default>;
+            decisionSupport: Injected<typeof import("./examples/decisionSupport").default>;
+            decisionSupportPanel: Injected<typeof import("./examples/decisionSupportPanel").default>;
             getCase: Injected<typeof import("./examples/getCase").default>;
+            orderCatalog: Injected<typeof import("./examples/orderCatalog").default>;
+            orderFields: Injected<typeof import("./examples/orderFields").default>;
+            orderSearch: Injected<typeof import("./examples/orderSearch").default>;
             render: Injected<typeof import("./examples/render").default>;
             result: Injected<typeof import("./examples/result").default>;
             cases: {
+                adaptiveIntake: Injected<typeof import("./examples/cases/adaptiveIntake").default>;
                 attachment: Injected<typeof import("./examples/cases/attachment").default>;
                 basic: Injected<typeof import("./examples/cases/basic").default>;
+                bodyMap: Injected<typeof import("./examples/cases/bodyMap").default>;
                 cardinality: Injected<typeof import("./examples/cases/cardinality").default>;
                 codingSugar: Injected<typeof import("./examples/cases/codingSugar").default>;
                 conflictingCoding: Injected<typeof import("./examples/cases/conflictingCoding").default>;
+                decisionSupport: Injected<typeof import("./examples/cases/decisionSupport").default>;
                 diagnosis: Injected<typeof import("./examples/cases/diagnosis").default>;
                 duplicates: Injected<typeof import("./examples/cases/duplicates").default>;
                 encoded: Injected<typeof import("./examples/cases/encoded").default>;
                 invalidValues: Injected<typeof import("./examples/cases/invalidValues").default>;
                 malformedPath: Injected<typeof import("./examples/cases/malformedPath").default>;
+                medicationSentence: Injected<typeof import("./examples/cases/medicationSentence").default>;
                 openChoice: Injected<typeof import("./examples/cases/openChoice").default>;
+                orderComposer: Injected<typeof import("./examples/cases/orderComposer").default>;
                 references: Injected<typeof import("./examples/cases/references").default>;
                 sparse: Injected<typeof import("./examples/cases/sparse").default>;
                 symptoms: Injected<typeof import("./examples/cases/symptoms").default>;
@@ -71,6 +81,13 @@ declare global {
                 select: Injected<typeof import("./examples/ui/select").default>;
                 styles: Injected<typeof import("./examples/ui/styles").default>;
             };
+        };
+        generator: {
+            escape: Injected<typeof import("./generator/escape").default>;
+            generate: Injected<typeof import("./generator/generate").default>;
+            path: Injected<typeof import("./generator/path").default>;
+            renderItem: Injected<typeof import("./generator/renderItem").default>;
+            write: Injected<typeof import("./generator/write").default>;
         };
         http: {
             dispatch: Injected<typeof import("./http/dispatch").default>;

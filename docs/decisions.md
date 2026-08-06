@@ -51,3 +51,10 @@ authority on collection.
 A renderer is convenience tooling and a reference producer. The presentation
 layer can be used by a hand-written form with only the linter, runtime and
 Collector.
+
+## Generated source is project-owned
+
+The Scaffold Generator is a one-time semantic bootstrap, like an application
+scaffold. Generated HTML becomes ordinary project source and may be redesigned
+by developers or agents. Regeneration does not own or merge bespoke markup and
+must not overwrite an existing file without an explicit force operation.

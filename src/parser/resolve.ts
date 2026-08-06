@@ -40,7 +40,7 @@ export default function (
         const allowed: Record<string, Set<string>> = {
             choice: new Set(["system", "version", "code", "display", "userSelected"]),
             coding: new Set(["system", "version", "code", "display", "userSelected"]),
-            "open-choice": new Set(["system", "version", "code", "display", "userSelected"]),
+            "open-choice": new Set(["system", "version", "code", "display", "userSelected", "text"]),
             quantity: new Set(["value", "comparator", "unit", "system", "code"]),
             reference: new Set(["reference", "type", "identifier.system", "identifier.value", "display"]),
             attachment: new Set(["contentType", "language", "url", "title", "creation"]),

@@ -6,6 +6,7 @@ const LABELS: Record<string, string> = {
     index: "Overview",
     concepts: "Presentation layer",
     components: "Components",
+    generator: "Scaffold generator",
     "field-names": "Field names",
     "entry-list": "Form entry list",
     types: "FHIR type binding",
@@ -25,7 +26,7 @@ const LABELS: Record<string, string> = {
 const NAVIGATION = [
     { label: "Start", ids: ["index", "concepts", "components"] },
     { label: "HTML contract", ids: ["rendering", "field-names", "entry-list", "types"] },
-    { label: "Runtime components", ids: ["parser", "linter", "expressions"] },
+    { label: "Runtime components", ids: ["generator", "parser", "linter", "expressions"] },
     { label: "Protocol", ids: ["exchange"] },
     { label: "Output", ids: ["extraction", "conformance"] },
     { label: "Examples", ids: ["examples/blood-pressure", "examples/phq9", "examples/diagnosis"] },

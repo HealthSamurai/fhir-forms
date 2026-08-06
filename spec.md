@@ -15,6 +15,7 @@ Core model and HTML contract:
 
 Runtime and output:
 
+- [Scaffold generator](docs/generator.md)
 - [Collector and result validation](docs/parser.md)
 - [Form linter](docs/linter.md)
 - [Reactive runtime](docs/expressions.md)

@@ -92,6 +92,8 @@ entries, not on which renderer produced the DOM.
 The presentation layer is implemented by independent components that share one
 binding kernel:
 
+- a **Scaffold Generator** produces editable conforming HTML and structured
+  handoff warnings from a Questionnaire without retaining ownership of the file;
 - a **Collector and Validator** converts an ordered form entry list into a typed
   QuestionnaireResponse and reports structural or value issues;
 - a **Form Linter** checks that an HTML form can represent the Questionnaire and
@@ -115,9 +117,10 @@ binding kernel:
 
 ## Runtime components
 
-1. [Collector and result validation](parser.md)
-2. [Form linter](linter.md)
-3. [Reactive runtime](expressions.md)
+1. [Scaffold generator](generator.md)
+2. [Collector and result validation](parser.md)
+3. [Form linter](linter.md)
+4. [Reactive runtime](expressions.md)
 
 ## Protocol and output
 

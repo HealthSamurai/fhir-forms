@@ -16,7 +16,8 @@ export default async function (
     if (!hasAtomic && componentCount === 0) return { ok: true as const, empty: true as const };
     if (!hasAtomic && opts.definition?.required !== true) {
         const missingPrimaryComponent =
-            (["choice", "coding", "open-choice"].includes(type) && components.code === undefined) ||
+            (["choice", "coding"].includes(type) && components.code === undefined) ||
+            (type === "open-choice" && components.code === undefined && components.text === undefined) ||
             (type === "quantity" && components.value === undefined) ||
             (type === "reference" && components.reference === undefined && components["identifier.value"] === undefined) ||
             (type === "attachment" && components.url === undefined);
@@ -113,9 +114,14 @@ export default async function (
         const raw = requireText();
         return raw !== null && !/[\s]/.test(raw) ? lexical("valueUri", raw) : invalid("FHIR uri without whitespace");
     }
-    if (type === "open-choice" && hasAtomic) {
-        const raw = requireText();
-        return raw === null ? invalid("open-choice text") : lexical("valueString", raw);
+    if (type === "open-choice" && components.text !== undefined) {
+        if (components.code !== undefined || components.version !== undefined ||
+            components.display !== undefined || components.userSelected !== undefined) {
+            return fail("value.conflicting-representations", "Open choice text cannot be mixed with Coding components");
+        }
+        return typeof components.text === "string"
+            ? lexical("valueString", components.text)
+            : invalid("open-choice text");
     }
     if (type === "choice" || type === "coding" || type === "open-choice") {
         if (hasAtomic) {
