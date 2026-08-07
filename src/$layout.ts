@@ -14,6 +14,7 @@ export default function (_ctx: Context, _session: Session | null, opts: { title?
 <script src="/events/client.js" defer></script>
 <script src="/examples/repeats.js" defer></script>
 <script src="/examples/vitals.js" defer></script>
+<script src="/examples/phq9.js" defer></script>
 ${opts.headExtra ?? ""}
 </head>
 <body>

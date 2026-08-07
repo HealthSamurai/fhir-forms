@@ -1,160 +1,131 @@
-# Reactive runtime
+# Enablement and calculated fields
 
-The Reactive Runtime executes `enableWhen` and calculated fields as rules over the current form
-answers. Their result must not depend on where they execute. A renderer may run a
-rule through generated client JavaScript or ask the server to re-render the form;
-the wire contract and the resulting QuestionnaireResponse are the same.
+Questionnaire and SDC define reactive rules. A renderer chooses where each rule
+executes; the server evaluates every rule again before storing a response.
 
-This separation is normative:
+~~~text
+FHIRPath rule
+  |-- supported compiler subset -> generated plain JavaScript
+  `-- unsupported/server-dependent -> server evaluation -> HTML fragment
+~~~
 
-- the Questionnaire defines the rule and is the source of truth;
-- the renderer chooses an execution strategy for each rule;
-- the server evaluates every rule again when it collects or stores an answer.
+Selection is per rule. Client execution improves latency but is never authority.
 
-Client evaluation is an optimisation for responsiveness. It is never an authority
-and never changes what a crafted POST is allowed to answer.
+## Rule preparation
 
-## Observable behavior
+Before rendering, an implementation:
 
-### `enableWhen`
+1. parses expressions on the server;
+2. resolves item references and types against the Questionnaire;
+3. builds and orders the dependency graph;
+4. assigns supported rules to client compilation;
+5. assigns refused or server-dependent rules to server evaluation.
 
-An enabled item is rendered and participates in constraint validation and form
-submission. A disabled item:
+Compiler refusal is expected. Approximating unsupported behavior is a
+conformance failure.
 
-1. is hidden from the form;
-2. has its containing `<fieldset disabled>` so none of its controls are successful
-   form entries;
-3. contributes no item or answer to the collected QuestionnaireResponse;
-4. has its unsaved values cleared when it transitions from enabled to disabled.
+## Client compilation
 
-Clearing is necessary for parity. A server re-render removes the closed branch;
-client execution must not preserve a value that would have disappeared in the
-server strategy and restore it when the branch opens again.
+The compiler emits ordinary JavaScript bound to one Questionnaire canonical URL
+and version:
 
-The server evaluates `enableWhen` against the complete raw entry list before it
-builds the response. It does not trust `hidden`, `disabled`, or any other DOM
-state sent by the browser. A submitted answer for a disabled item is ignored.
+~~~js
+export function updateAdultDetails(form) {
+  const raw = form.elements.namedItem("item[age]")?.value;
+  const enabled = raw !== "" && Number.isInteger(Number(raw)) && Number(raw) >= 18;
+  const target = form.querySelector('[data-field="item[adult-details]"]');
 
-Multiple `enableWhen` predicates use the Questionnaire's declared
-`enableBehavior` (`all` or `any`). The compiler may optimise the predicates, but
-must not change their typing, comparison, repeat scoping, or empty-value rules.
+  target.hidden = !enabled;
+  target.disabled = !enabled;
+}
+~~~
 
-### Calculated fields
+Generated code contains resolved field names and explicit lexical conversion. It
+does not use `eval`, parse FHIRPath in the browser or build a
+QuestionnaireResponse. It attaches idempotently after fragment replacement.
 
-A calculated item is derived from other answers. It is displayed as `<output>` or
-as a disabled control and is not an authoritative successful form entry. Client
-code may update its preview, but the server calculates the typed answer again and
-places that result in the QuestionnaireResponse.
+## Server execution
 
-If a renderer includes a named readonly control for compatibility, the collector
-must ignore its submitted value and overwrite it with the server result. `readonly`
-is not a security boundary: unlike `disabled`, it is included in FormData.
+A wrapper may post the current successful controls and replace an affected
+fragment:
 
-An empty calculation produces no answer for an optional item. A calculation
-failure is not an empty answer: it is a form-level evaluation issue and prevents a
-completed response from being stored.
+~~~html
+<div hx-post="/forms/intake/recompute"
+     hx-trigger="change from:closest form delay:250ms"
+     hx-include="closest form"
+     hx-target="#adult-details"
+     hx-swap="outerHTML"
+     hx-sync="closest form:queue last">
+  <fieldset id="adult-details"
+            data-field="item[adult-details]"
+            disabled hidden>
+    <!-- canonical child controls -->
+  </fieldset>
+</div>
+~~~
 
-## Dependency graph
+The recompute endpoint binds the draft entry list, evaluates affected rules in
+dependency order, writes nothing and renders the fragment. A native request may
+receive the full form. Issuing recompute from a wrapper avoids blocking on
+incomplete native `required` validation.
 
-Before rendering, the implementation resolves every rule to a graph:
+## Enablement semantics
 
-```text
-source item paths -> enableWhen/calculation -> target item path
-```
+An enabled item is visible and participates in validation and submission. A
+disabled item:
 
-Dependencies are resolved against the Questionnaire, not discovered by walking
-the DOM. Calculations are evaluated in topological order, followed by enablement
-rules that depend on their results. A dependency cycle is a definition error and
-the form must not be published.
+- is hidden;
+- is contained by a disabled fieldset;
+- contributes no answer;
+- loses unsaved values when the branch closes.
 
-Within a repeated group, an unqualified dependency resolves in the current
-occurrence. Rules that aggregate or reach across occurrences require explicit
-repeat semantics; an implementation that cannot compile those semantics uses the
-server strategy for that rule.
+The server evaluates enablement from submitted source answers, not from DOM
+attributes. It discards crafted answers for disabled items. Multiple predicates
+use the Questionnaire's declared `enableBehavior`.
 
-## Strategy A: compiled client runtime
+## Calculated fields
 
-At render time the server may compile a supported rule into plain JavaScript. It
-resolves item paths and types before emitting code. The browser receives an
-already-generated function; it never parses FHIRPath, calls `eval`, or assembles a
-QuestionnaireResponse.
+Calculated answers render as `<output>`, text or disabled controls:
 
-```js
-// Generated for one Questionnaire url + version.
-const rules = {
-  enableDiagnosis: values => values("item[hasDiagnosis]")[0] === "true",
-  bmi: values => {
-    const kg = Number(values("item[weight].value")[0]);
-    const cm = Number(values("item[height].value")[0]);
-    return kg > 0 && cm > 0 ? kg / ((cm / 100) ** 2) : null;
-  },
-};
-```
+~~~html
+<output data-field="item[bmi]" aria-live="polite">22.9</output>
+~~~
 
-The generated runtime attaches once to the form and uses delegated `input` and
-`change` listeners. After a change it:
+The output has no `name`. Client code may update the preview; final collection
+recalculates and materializes the typed answer. A submitted readonly or hidden
+calculated value is ignored.
 
-1. reads the affected source controls by their canonical field names;
-2. evaluates only dependent rules, in graph order;
-3. applies enablement to the target fieldset;
-4. updates calculated outputs;
-5. requests no network round trip for rules it evaluated successfully.
+An empty optional calculation produces no answer. Evaluation failure is an issue,
+not an empty answer.
 
-Attaching is idempotent because server responses may replace the form. A runtime
-is keyed by Questionnaire canonical URL and version. Generated inline code uses a
-CSP nonce; a versioned external script is an equivalent delivery optimisation.
-Neither strategy requires `unsafe-inline` or runtime expression evaluation.
+## Dependencies and hybrid execution
 
-## Strategy B: server-driven re-render
+Dependencies are resolved from the Questionnaire, not the DOM:
 
-The server strategy is the required baseline and the progressive-enhancement
-fallback. A change to a source field posts the current entry list without a final
-submit marker. The server:
+~~~text
+source item paths -> calculation/enablement -> target item path
+~~~
 
-1. parses the draft entries without writing a resource;
-2. evaluates calculations and enablement using the Questionnaire definition;
-3. renders the new form state;
-4. returns the form or affected fragment for replacement.
+Calculations run in topological order before rules that depend on them. Cycles
+are publication errors. Within repeats, local dependencies resolve in the current
+occurrence; unsupported cross-occurrence logic runs on the server.
 
-htmx may debounce the change and swap the returned fragment, but htmx is not part
-of the contract. Another client may perform the same request, and a browser with
-JavaScript disabled obtains the same correct state on its next explicit submit or
-recompute action.
-
-The response carries the current values, validation issues, enabled branches, and
-calculated outputs. Replacing a fragment must preserve canonical field names and
-repeat occurrence indexes.
-
-## Hybrid execution
-
-Execution is selected per rule, not per form. One form may calculate BMI in the
-browser while sending a terminology-dependent eligibility rule to the server.
-
-| compile to client JavaScript | evaluate on the server |
+| compile locally | evaluate on server |
 |---|---|
-| deterministic operations over fields in this form | terminology operations such as `memberOf` |
-| supported comparisons, boolean logic and arithmetic | reads of other resources or server state |
-| dependencies with statically resolved item paths | unsupported expression languages or functions |
-| repeat scoping the compiler can prove | cross-occurrence logic the compiler cannot preserve |
+| comparisons, boolean logic and arithmetic | terminology operations |
+| statically resolved form fields | external resources or server state |
+| provable repeat scope | unsupported languages, functions or scope |
 
-When a changed source reaches both kinds of rule, client rules update immediately
-and one debounced server request updates the rest. The returned fragment is the
-authoritative view and the client runtime attaches to it again.
+A form may combine both strategies. One debounced server request updates all
+server-owned dependencies reached by a change.
 
-The compiler must be allowed to refuse a rule. Refusal is not an error while the
-server evaluator supports it; silently generating an approximation is an error.
+## Parity
 
-## Parity requirements
+Client and server fixtures must agree on enabled items, cleared values,
+calculated types, empty values, repeat scope and dependency order. Final server
+collection remains the conformance boundary.
 
-The same conformance fixtures must be executed through the server evaluator and
-the generated client module. For every input state they must agree on:
+See the [PHQ-9 example](examples/phq9.md) for a compiled score and conditional
+question, or [/examples/decision-support](/examples/decision-support) for server
+recomputation.
 
-- which items are enabled;
-- which values are cleared when a branch closes;
-- each calculated value and its FHIR type;
-- empty, invalid and repeated-answer behavior;
-- dependency ordering.
-
-Server collection remains the final conformance boundary. It re-evaluates rules,
-discards answers for disabled items, ignores client-provided calculated results,
-and stores only its own typed result.

@@ -3,7 +3,9 @@
   window.__hyperEventsInstalled = true;
 
   let es;
+  let retryTimer;
   let retryMs = 1000;
+  let stopped = false;
 
   function emitDomEvent(data) {
     document.dispatchEvent(new CustomEvent('hyper-events', { detail: data }));
@@ -30,16 +32,31 @@
   }
 
   function connect() {
+    if (stopped) return;
     es = new EventSource('/events');
     es.onmessage = (e) => {
       try { handle(JSON.parse(e.data)); retryMs = 1000; } catch {}
     };
     es.onerror = () => {
       try { es.close(); } catch {}
-      setTimeout(connect, retryMs);
+      retryTimer = setTimeout(connect, retryMs);
       retryMs = Math.min(retryMs * 2, 10000);
     };
   }
+
+  function disconnect() {
+    stopped = true;
+    clearTimeout(retryTimer);
+    try { es?.close(); } catch {}
+  }
+
+  window.addEventListener('pagehide', disconnect);
+  window.addEventListener('pageshow', () => {
+    if (!stopped) return;
+    stopped = false;
+    retryMs = 1000;
+    connect();
+  });
 
   connect();
 })();

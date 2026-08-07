@@ -11,8 +11,9 @@ const LABELS: Record<string, string> = {
     "entry-list": "Form entry list",
     types: "FHIR type binding",
     rendering: "Rendering",
+    repeats: "Repetition",
     exchange: "Exchange",
-    expressions: "Reactive runtime",
+    expressions: "Enablement & calculations",
     extraction: "Extraction",
     parser: "Collector & validation",
     linter: "Form linter",
@@ -25,7 +26,7 @@ const LABELS: Record<string, string> = {
 
 const NAVIGATION = [
     { label: "Start", ids: ["index", "concepts", "components"] },
-    { label: "HTML contract", ids: ["rendering", "field-names", "entry-list", "types"] },
+    { label: "HTML contract", ids: ["rendering", "field-names", "repeats", "entry-list", "types"] },
     { label: "Runtime components", ids: ["generator", "parser", "linter", "expressions"] },
     { label: "Protocol", ids: ["exchange"] },
     { label: "Output", ids: ["extraction", "conformance"] },

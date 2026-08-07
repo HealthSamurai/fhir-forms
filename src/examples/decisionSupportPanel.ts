@@ -11,18 +11,18 @@ export default function (
 ) {
     const tone = opts.level === "urgent"
         ? {
-            box: "border-[#d86850] bg-[#fff4ef]",
+            box: "bg-[linear-gradient(145deg,#fff0e9_0%,#fff8f3_100%)] ring-coral/25",
             eyebrow: "text-[#9e3d2a]",
             score: "bg-[#d86850] text-white",
         }
         : opts.level === "same-day"
             ? {
-                box: "border-[#d39b45] bg-[#fff8e8]",
+                box: "bg-[linear-gradient(145deg,#fff4d9_0%,#fffaf0_100%)] ring-[#d39b45]/25",
                 eyebrow: "text-[#8b5d15]",
                 score: "bg-[#b87718] text-white",
             }
             : {
-                box: "border-teal/35 bg-teal-soft/70",
+                box: "bg-[linear-gradient(145deg,#dff3ed_0%,#f3fbf8_100%)] ring-teal/20",
                 eyebrow: "text-teal-dark",
                 score: "bg-teal text-white",
             };
@@ -31,8 +31,8 @@ export default function (
         : "<li>No escalation factors selected</li>";
 
     return [
-        '<aside id="decision-support-result" class="rounded-xl border ' + tone.box +
-            ' p-5 shadow-sm transition" aria-live="polite">',
+        '<aside id="decision-support-result" class="h-full rounded-2xl ' + tone.box +
+            ' p-5 shadow-[0_12px_32px_rgba(25,62,50,.08)] ring-1 transition" aria-live="polite">',
         '<div class="flex items-start justify-between gap-4">',
         "<div>",
         '<p class="font-mono text-[.58rem] font-bold uppercase tracking-[.16em] ' +
@@ -46,7 +46,7 @@ export default function (
             tone.score + '" aria-label="Illustrative score ' + opts.score + '">' +
             opts.score + "</strong>",
         "</div>",
-        '<ul class="mt-4 grid gap-1 border-t border-current/10 pt-3 font-mono text-[.65rem] text-ink/65">' +
+        '<ul class="mt-4 grid gap-1 rounded-xl bg-white/55 p-3 font-mono text-[.65rem] text-ink/65">' +
             factors + "</ul>",
         '<p class="mt-4 text-[.7rem] leading-relaxed text-muted">Demonstration rule only. It is not a validated clinical protocol or medical advice.</p>',
         "</aside>",

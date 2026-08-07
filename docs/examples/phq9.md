@@ -1,126 +1,92 @@
-# PHQ-9 calculated score
+# PHQ-9: compiled score and conditional question
 
-PHQ-9 demonstrates a rich reactive form whose score remains a Questionnaire
-answer rather than browser-owned state.
+The [live example](/examples/phq9) presents nine coded answers as a compact
+matrix, calculates a score preview and conditionally enables functional impact.
+It demonstrates mechanics, not diagnosis, triage or a safety workflow.
 
-## Questionnaire excerpt
+It follows the HL7 SDC
+[PHQ-9 example](https://build.fhir.org/ig/HL7/sdc/en/Questionnaire-questionnaire-sdc-profile-example-PHQ9.html).
 
-Each option carries its ordinal weight:
+## Questionnaire rules
+
+Answer options carry `itemWeight`; SDC FHIRPath calculates the total:
 
 ~~~yaml
 - linkId: q1
   type: choice
-  text: Little interest or pleasure in doing things
-  code:
-    - { system: http://loinc.org, code: 44250-9 }
+  required: true
   answerOption:
-    - valueCoding:
-        { system: http://loinc.org, code: LA6568-5, display: Not at all }
+    - valueCoding: { system: http://loinc.org, code: LA6568-5, display: Not at all }
       extension:
-        - { url: .../questionnaire-ordinalValue, valueDecimal: 0 }
-    - valueCoding:
-        { system: http://loinc.org, code: LA6569-3, display: Several days }
-      extension:
-        - { url: .../questionnaire-ordinalValue, valueDecimal: 1 }
-    - valueCoding:
-        { system: http://loinc.org, code: LA6570-1, display: More than half the days }
-      extension:
-        - { url: .../questionnaire-ordinalValue, valueDecimal: 2 }
-    - valueCoding:
-        { system: http://loinc.org, code: LA6571-9, display: Nearly every day }
-      extension:
-        - { url: .../questionnaire-ordinalValue, valueDecimal: 3 }
+        - { url: http://hl7.org/fhir/StructureDefinition/itemWeight,
+            valueDecimal: 0 }
+    # remaining options have weights 1, 2 and 3
+
+- linkId: impact
+  type: choice
+  extension:
+    - url: .../sdc-questionnaire-enableWhenExpression
+      valueExpression:
+        language: text/fhirpath
+        expression: >
+          %resource.item.where(linkId.matches('q[1-9]'))
+            .answer.value.where(code != 'LA6568-5').exists()
 
 - linkId: total
   type: integer
-  text: Total score
   readOnly: true
-  code:
-    - { system: http://loinc.org, code: 44261-6, display: PHQ-9 total score }
   extension:
     - url: .../sdc-questionnaire-calculatedExpression
       valueExpression:
         language: text/fhirpath
-        expression: ...sum ordinal values for q1 through q9...
+        expression: >
+          %resource.item.where(linkId.matches('q[1-9]'))
+            .answer.value.weight().sum()
 ~~~
 
-The total is a coded calculated item. It belongs in the resulting
-QuestionnaireResponse even though the user never posts it.
+## HTML contract
 
-## Bespoke HTML excerpt
-
-A designer may use segmented controls, a compact matrix, cards, or a mobile
-stepper. The answer binding remains the same:
+The matrix design does not alter successful controls:
 
 ~~~html
-<section data-field="item[q1]">
-  <h2>Little interest or pleasure in doing things</h2>
-  <input
-    name="item[q1].system"
-    type="hidden"
-    value="http://loinc.org"
-  >
-  <label>
-    <input name="item[q1].code" type="radio" value="LA6568-5">
-    Not at all
-  </label>
-  <label>
-    <input name="item[q1].code" type="radio" value="LA6569-3">
-    Several days
-  </label>
-  <label>
-    <input name="item[q1].code" type="radio" value="LA6570-1">
-    More than half the days
-  </label>
-  <label>
-    <input name="item[q1].code" type="radio" value="LA6571-9">
-    Nearly every day
-  </label>
-</section>
+<input name="item[q1].system" type="hidden" value="http://loinc.org">
+<label>
+  <input name="item[q1].code"
+         type="radio"
+         value="LA6568-5"
+         data-phq-score="0">
+  Not at all
+</label>
 
-<section data-field="item[total]">
-  <span>Total score</span>
-  <output id="phq9-total">0</output>
-  <progress max="27" value="0"></progress>
-</section>
+<output data-phq-total>0 / 27</output>
 ~~~
 
-The output has no name. Client JavaScript may update it immediately, but it does
-not submit a score.
+The compiled client module derives `data-phq-score` from Questionnaire weights,
+updates the unnamed output and disables the impact fieldset when its expression
+is false.
 
-## Runtime behavior
+## Server authority
 
-The Reactive Runtime may compile the supported sum into client JavaScript. The
-generated code reads canonical answer fields and updates the output. If the
-expression cannot be compiled safely, a server recompute renders the same state.
+Final collection:
 
-On every final collection, the server:
+1. discards submitted calculated fields;
+2. validates one permitted Coding for each question;
+3. resolves weights from the versioned Questionnaire;
+4. recalculates total and enabled state;
+5. discards answers from disabled branches;
+6. passes sanitized entries and server-owned results to the Collector.
 
-1. validates the nine selected Codings;
-2. reads ordinal weights from the Questionnaire;
-3. calculates the typed integer total;
-4. ignores any hostile client entry targeting the read-only total;
-5. places its own result in the QuestionnaireResponse.
-
-Server and client execution must agree on the same fixtures. See
-[Reactive runtime](../expressions.md).
-
-## Result excerpt
+The response therefore contains user answers plus a trusted calculated item:
 
 ~~~yaml
-item:
-  - linkId: q1
-    answer:
-      - valueCoding:
-          system: http://loinc.org
-          code: LA6569-3
-          display: Several days
-  # q2 through q9
-  - linkId: total
-    answer:
-      - valueInteger: 8
+- linkId: q1
+  answer:
+    - valueCoding: { system: http://loinc.org, code: LA6569-3 }
+- linkId: total
+  answer:
+    - valueInteger: 3
 ~~~
 
-Interpretation bands are not part of this presentation example. If they are
-clinical rules that must travel with the form, they require an explicit,
-reviewable definition rather than hard-coded renderer text.
+The same rules may execute through htmx server recomputation. Only latency and
+rendering change; field names and final collection do not.
+

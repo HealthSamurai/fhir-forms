@@ -63,6 +63,7 @@ declare global {
                 medicationSentence: Injected<typeof import("./examples/cases/medicationSentence").default>;
                 openChoice: Injected<typeof import("./examples/cases/openChoice").default>;
                 orderComposer: Injected<typeof import("./examples/cases/orderComposer").default>;
+                phq9: Injected<typeof import("./examples/cases/phq9").default>;
                 references: Injected<typeof import("./examples/cases/references").default>;
                 sparse: Injected<typeof import("./examples/cases/sparse").default>;
                 symptoms: Injected<typeof import("./examples/cases/symptoms").default>;

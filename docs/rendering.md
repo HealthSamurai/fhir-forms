@@ -46,13 +46,13 @@ Visual composition does not change the wire representation. The parser joins
 ## Repetition
 
 A repeating item or group renders one block per occurrence. Every block carries
-its explicit zero-based index in all descendant names. Client-side add/remove
-controls may insert trusted server-rendered templates, replacing only the index
-token; they do not assemble a QuestionnaireResponse or maintain a second model.
+its explicit zero-based index in all descendant names. Adding, removing and
+compacting occurrences may run through a trusted client template or a
+non-writing server re-render enhanced with htmx. Both strategies produce the
+same entry list and retain server collection as the final authority.
 
-After removing a row, indexes are compacted before submission. Nested repeats use
-different tokens at each level, so adding a diagnosis inside visit `2` changes
-only the diagnosis occurrence in that visit.
+The complete algorithms, nested-scope rules and examples are defined in
+[Repetition and row editing](repeats.md).
 
 ## Enabled, hidden and calculated items
 

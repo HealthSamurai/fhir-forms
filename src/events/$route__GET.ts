@@ -4,27 +4,34 @@
 // closes, which is a better answer to "who is here" than anything a heartbeat
 // could give.
 export default async function (ctx: Context, session: Session, opts: { req: Request }) {
+    let cleanup = () => {};
     const stream = new ReadableStream({
         start(controller) {
             const enc = new TextEncoder();
+            let closed = false;
+            let unsub = () => {};
             const send = (e: any) => {
                 try { controller.enqueue(enc.encode(`data: ${JSON.stringify(e)}\n\n`)); }
-                catch { unsub(); }
+                catch { cleanup(); }
             };
             send({ type: "hello", serverStart: (ctx.state as any).serverStart });
-            const unsub = ctx.fns.events.subscribe({ handler: send });
+            unsub = ctx.fns.events.subscribe({ handler: send });
             // The stream is also the presence: it lasts exactly as long as the tab.
             const leave = ctx.fns.events.join({});
             const keepalive = setInterval(() => {
-                try { controller.enqueue(enc.encode(`: ping\n\n`)); } catch { /* closed */ }
+                try { controller.enqueue(enc.encode(`: ping\n\n`)); } catch { cleanup(); }
             }, 5_000);
-            opts.req.signal.addEventListener("abort", () => {
+            cleanup = () => {
+                if (closed) return;
+                closed = true;
                 clearInterval(keepalive);
                 leave();
                 unsub();
                 try { controller.close(); } catch { /* already closed */ }
-            });
+            };
+            opts.req.signal.addEventListener("abort", cleanup, { once: true });
         },
+        cancel() { cleanup(); },
     });
     return new Response(stream, {
         headers: {

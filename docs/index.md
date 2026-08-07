@@ -1,142 +1,94 @@
 # FHIR Forms Presentation Layer
 
-FHIR Questionnaire and SDC describe clinical meaning, answer types, constraints
-and a portable set of rendering hints. They do not attempt to encode every
-possible user interface.
+FHIR Questionnaire describes clinical meaning, answer types, constraints and
+portable behavior. It cannot describe every application-specific layout or
+interaction.
 
 ## Why this specification exists
 
-The primary use case is not generating a default form. It is building an
-intentionally designed, application-grade interface while continuing to use a
-FHIR Questionnaire as the source of truth. The interface may be dense,
-responsive, brand-specific and highly interactive, but its questions, answer
-types, constraints and resulting QuestionnaireResponse should still follow the
-Questionnaire.
+A generic Questionnaire renderer chooses widgets from the item tree. That works
+for portable forms, but not for every product interface. A bespoke form may need
+to:
 
-A conventional Questionnaire renderer starts from the item tree and chooses a
-generic widget for each item type. It can apply a theme and a portable set of SDC
-rendering hints, but it can only render presentation decisions that the
-Questionnaire actually contains. It cannot infer a designer's intent, such as:
+- combine a number and unit into one quantity widget;
+- arrange related measurements in a responsive clinical grid;
+- present repeats as compact rows;
+- compose several items into one workflow-specific control;
+- use custom navigation, disclosure or decision support.
 
-- presenting a decimal and its unit as one compound quantity input;
-- placing systolic and diastolic pressure on the same row while arranging other
-  observations in a responsive grid;
-- making repeated diagnoses look like rows in a compact paper form;
-- composing several Questionnaire items into one application-specific widget;
-- changing navigation, disclosure and interaction patterns for desktop and
-  mobile workflows.
+Encoding those decisions as proprietary Questionnaire extensions couples the
+form to one renderer. Binding arbitrary HTML through application-specific code
+instead makes extraction and validation non-portable.
 
-These decisions are deliberately outside the core Questionnaire semantic model.
-A renderer can support them through proprietary extensions, templates or custom
-components, but then the form becomes specific to that renderer. Another
-implementation cannot reliably reproduce the presentation, and custom HTML no
-longer has a standard way to prove that it still represents the Questionnaire.
+This specification defines a smaller boundary: HTML may be arbitrary when its
+successful controls follow a public, Questionnaire-aware binding contract.
 
-This boundary is deliberate, not a missing feature that every generic renderer
-should repair. Questionnaire and SDC remain portable semantic definitions;
-HTML supplies the application-specific composition and interaction language.
-
-Without a standard boundary between those semantics and the rendered interface,
-implementers usually have to choose one of three compromises:
-
-- restrict the interface to what a particular Questionnaire renderer supports;
-- introduce a proprietary UI schema alongside the Questionnaire and duplicate
-  paths, constraints and behavior across both models;
-- bind custom HTML to application-specific extraction code that cannot be
-  inspected, linted or reused by another implementation.
-
-All three approaches weaken portability. The Questionnaire may remain formally
-standard, while the form that users actually interact with becomes coupled to a
-renderer, framework or backend.
-
-This specification defines the missing presentation boundary. It treats HTML as
-the presentation language and introduces a small, observable binding contract
-between Questionnaire items, successful HTML form entries and
-QuestionnaireResponse items. The contract makes it possible to ask and answer a
-precise question: **is this arbitrary HTML form a valid rendering of this FHIR
-Questionnaire?**
-
-The goal is to preserve both sides of that boundary:
-
-- the Questionnaire remains the source of clinical meaning, types and
-  constraints;
-- the HTML remains free to use any layout, design system, server framework or
-  client runtime;
-- a conforming Collector can reconstruct and validate the same
-  QuestionnaireResponse independently of the renderer;
-- a Form Linter can detect structural gaps before the form reaches a user;
-- dynamic behavior can run as compiled client JavaScript, server re-rendering or
-  a combination of both without changing the submission contract.
-
-This is not a replacement for Questionnaire or SDC, and it is deliberately not
-another universal UI schema. It does not prescribe CSS, DOM structure or a
-JavaScript framework. It standardizes only the binding surface that must remain
-stable when presentation and execution strategies change.
-
-This specification adds an HTML presentation layer without adding another UI
-schema:
-
-```text
+~~~text
 Questionnaire
-    ↓ semantic binding
-arbitrary dynamic HTML form
-    ↓ canonical HTML entry list
+    -> canonical field bindings
+arbitrary dynamic HTML
+    -> ordered form entry list
 QuestionnaireResponse
-```
+~~~
 
-An HTML form is considered a rendering of a Questionnaire when it follows this
-binding contract. It may be hand-written, server-rendered, progressively enhanced
-or implemented as a client application. Conformance depends on behavior and form
-entries, not on which renderer produced the DOM.
+This is a presentation layer, not another UI schema. It does not prescribe CSS,
+DOM structure, components or a JavaScript framework.
 
-The presentation layer is implemented by independent components that share one
-binding kernel:
+## Contract
 
-- a **Scaffold Generator** produces editable conforming HTML and structured
-  handoff warnings from a Questionnaire without retaining ownership of the file;
-- a **Collector and Validator** converts an ordered form entry list into a typed
-  QuestionnaireResponse and reports structural or value issues;
-- a **Form Linter** checks that an HTML form can represent the Questionnaire and
-  identifies behavior that still requires runtime verification;
-- a **Reactive Runtime** executes `enableWhen` and calculated fields through
-  compiled client JavaScript, server re-rendering, or both;
-- a **Renderer** is optional convenience tooling, not a requirement of the
-  contract.
+- Questionnaire is authoritative for structure, types, terminology, constraints,
+  repetition, enablement, calculations and extraction metadata.
+- HTML owns layout, widgets, navigation, interaction and accessibility.
+- Named successful controls use canonical Questionnaire paths.
+- A Collector resolves and validates entries against the Questionnaire before it
+  creates a QuestionnaireResponse.
+- Client behavior is optional enhancement; the server re-evaluates authoritative
+  rules on final collection.
+- Conformance depends on observable behavior and submitted entries, not on which
+  renderer produced the page.
 
-## Start
+## Components
+
+- [Scaffold Generator](generator.md): creates editable conforming HTML.
+- [Collector](parser.md): creates and validates QuestionnaireResponse.
+- [Form Linter](linter.md): checks HTML bindings and required scenarios.
+- [Reactive Runtime](expressions.md): executes enablement and calculations.
+- Renderer: an optional producer of conforming HTML.
+
+All components use the same path, type, cardinality and rule semantics. See
+[Components and shared kernel](components.md).
+
+## Reading order
+
+### Model
 
 1. [The presentation layer](concepts.md)
-2. [Components and shared kernel](components.md)
+2. [Rendering Questionnaire items](rendering.md)
 
-## HTML contract
+### HTML contract
 
-1. [Rendering Questionnaire items as HTML](rendering.md)
-2. [Field names and Questionnaire paths](field-names.md)
-3. [HTML form entry list](entry-list.md)
-4. [FHIR type binding](types.md)
+1. [Field names and Questionnaire paths](field-names.md)
+2. [HTML form entry list](entry-list.md)
+3. [FHIR type binding](types.md)
+4. [Repetition and row editing](repeats.md)
 
-## Runtime components
+### Runtime and protocol
 
-1. [Scaffold generator](generator.md)
-2. [Collector and result validation](parser.md)
-3. [Form linter](linter.md)
-4. [Reactive runtime](expressions.md)
+1. [Collector and result validation](parser.md)
+2. [Enablement and calculated fields](expressions.md)
+3. [Request and response exchange](exchange.md)
+4. [Extraction](extraction.md)
+5. [Conformance](conformance.md)
 
-## Protocol and output
+### Examples
 
-1. [Request and response exchange](exchange.md)
-2. [Extraction](extraction.md)
-3. [Conformance](conformance.md)
-
-## Worked examples
-
-- [Blood pressure and quantities](examples/blood-pressure.md)
-- [PHQ-9 scoring](examples/phq9.md)
+- [Blood pressure](examples/blood-pressure.md)
+- [PHQ-9](examples/phq9.md)
 - [Diagnosis](examples/diagnosis.md)
 
-## Design notes
+### Design notes
 
-- [Decision register](decisions.md)
+- [Decisions](decisions.md)
 - [Open questions](open-questions.md)
 - [Prior art](../prior-art.md)
-- [Compatibility index](../spec.md)
+
