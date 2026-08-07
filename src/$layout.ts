@@ -31,8 +31,7 @@ ${opts.headExtra ?? ""}
   <nav class="flex items-center gap-1" aria-label="Primary">
     <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/">Specification</a>
     <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/examples">Examples</a>
-    <a class="hidden rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark sm:block" href="/fns">Registry</a>
-  <a class="text-sm font-semibold text-muted no-underline transition-colors hover:text-teal" href="https://github.com/HealthSamurai/fhir-forms" target="_blank" rel="noreferrer">GitHub</a>
+    <a class="text-sm font-semibold text-muted no-underline transition-colors hover:text-teal" href="https://github.com/HealthSamurai/fhir-forms" target="_blank" rel="noreferrer">GitHub</a>
     </nav>
 </header>
 <main id="main" class="mx-auto w-[min(1180px,calc(100%_-_2rem))] py-10 md:py-16">${opts.main}</main>
