@@ -6,19 +6,11 @@ interaction.
 
 ## Why this specification exists
 
-A generic Questionnaire renderer chooses widgets from the item tree. That works
-for portable forms, but not for every product interface. A bespoke form may need
-to:
-
-- combine a number and unit into one quantity widget;
-- arrange related measurements in a responsive clinical grid;
-- present repeats as compact rows;
-- compose several items into one workflow-specific control;
-- use custom navigation, disclosure or decision support.
-
-Encoding those decisions as proprietary Questionnaire extensions couples the
-form to one renderer. Binding arbitrary HTML through application-specific code
-instead makes extraction and validation non-portable.
+Modern HTML and JavaScript can implement effectively any layout, widget or
+interaction model. Questionnaire cannot, and should not, encode that entire
+space. Adding dozens of rendering extensions still cannot make a generic
+Questionnaire renderer equivalent to an arbitrary application interface; it only
+couples the definition to a particular renderer.
 
 This specification defines a smaller boundary: HTML may be arbitrary when its
 successful controls follow a public, Questionnaire-aware binding contract.
@@ -49,42 +41,31 @@ not sufficient if a form changes ancestry, cardinality, types or enabled state.
 
 | component | input | output |
 |---|---|---|
-| [Scaffold Generator](generator.md) | Questionnaire | editable HTML + warnings |
-| [Form Linter](linter.md) | Questionnaire + HTML | findings + unverified scenarios |
-| [Collector](parser.md) | Questionnaire + entry list | QuestionnaireResponse or issues |
-| [Reactive Runtime](expressions.md) | Questionnaire rules + current entries | enabled state + calculated previews |
+| [Scaffold Generator](tooling.md) | Questionnaire | editable HTML + warnings |
+| [Form Linter](tooling.md) | Questionnaire + HTML | findings + unverified scenarios |
+| [Collector](collector.md) | Questionnaire + entry list | QuestionnaireResponse or issues |
+| [Reactive Runtime](dynamic-behavior.md) | Questionnaire rules + current entries | enabled state + calculated previews |
 
 All components share canonical path resolution, type binding, cardinality and
 rule semantics. A Renderer is only an optional producer of conforming HTML.
 
 ## Reading order
 
-### Model
+### Core specification
 
-1. [Rendering Questionnaire items](rendering.md)
+1. [HTML binding](html-binding.md)
+2. [FHIR type binding](type-binding.md)
+3. [Dynamic behavior](dynamic-behavior.md)
+4. [Collection and validation](collector.md)
+5. [Server lifecycle and extraction](server-lifecycle.md)
+6. [Conformance](conformance.md)
 
-### HTML contract
+### Tooling and examples
 
-1. [Field names and Questionnaire paths](field-names.md)
-2. [HTML form entry list](entry-list.md)
-3. [FHIR type binding](types.md)
-4. [Repetition and row editing](repeats.md)
-
-### Runtime and protocol
-
-1. [Collector and result validation](parser.md)
-2. [Enablement and calculated fields](expressions.md)
-3. [Server lifecycle and extraction](server-lifecycle.md)
-4. [Conformance](conformance.md)
-
-### Examples
-
-- [Blood pressure](examples/blood-pressure.md)
-- [PHQ-9](examples/phq9.md)
-- [Diagnosis](examples/diagnosis.md)
+- [Generator and linter](tooling.md)
+- [Interactive HTML examples](/examples)
 
 ### Design notes
 
-- [Decisions](decisions.md)
-- [Open questions](open-questions.md)
+- [Decisions and open questions](design-notes.md)
 - [Prior art](../prior-art.md)

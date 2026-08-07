@@ -7,16 +7,16 @@ export default async function (ctx: Context, _session: Session | null, opts?: { 
 
     return `<section class="grid gap-7 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
   <aside class="lg:sticky lg:top-24 lg:self-start">
-    <p class="mb-3 font-mono text-[.68rem] font-medium uppercase tracking-[.14em] text-teal">Presentation examples</p>
-    <nav class="flex gap-2 overflow-x-auto pb-2 lg:block lg:max-h-[calc(100vh-8rem)] lg:space-y-5 lg:overflow-y-auto lg:pr-2" aria-label="Parser examples">
+    <p class="mb-3 font-mono text-[.68rem] font-medium uppercase tracking-[.14em] text-teal">Live examples</p>
+    <nav class="flex gap-2 overflow-x-auto pb-2 lg:block lg:max-h-[calc(100vh-8rem)] lg:space-y-5 lg:overflow-y-auto lg:pr-2" aria-label="FHIR form examples">
       ${groups.map(group => navigationGroup(group, catalog, selected.id)).join("\n")}
     </nav>
   </aside>
   <div class="min-w-0">
     <header class="mb-7 border-b border-ink/10 pb-6">
-      <p class="mb-3 font-mono text-xs font-medium uppercase tracking-[.14em] text-teal">FHIR semantics, arbitrary HTML</p>
+      <p class="mb-3 font-mono text-xs font-medium uppercase tracking-[.14em] text-teal">${groupLabel(selected.group)} / FHIR semantics, arbitrary HTML</p>
       <h1 class="mb-3 text-[clamp(2.4rem,6vw,4.8rem)] font-bold leading-[.94] tracking-[-.06em]">One contract. Any interface.</h1>
-      <p class="max-w-3xl text-lg leading-relaxed text-muted">From parser edge cases to bespoke spatial and composed widgets: inspect the live form, exact HTML, and resulting QuestionnaireResponse.</p>
+      <p class="max-w-3xl text-lg leading-relaxed text-muted">Start with interfaces a generic Questionnaire renderer cannot produce. Continue with binding reference cases and explicit rejections. Every page exposes the live form, submitted HTML, and resulting QuestionnaireResponse.</p>
     </header>
     ${card}
   </div>
@@ -31,7 +31,13 @@ function navigationGroup(group: string, catalog: Array<any>, selectedId: string)
             : "block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-muted no-underline hover:bg-teal-soft hover:text-teal-dark";
         return `<a class="${classes}" href="/examples/${slug(entry.id)}">${entry.title}</a>`;
     }).join("\n");
-    return `<div class="min-w-max lg:min-w-0"><h2 class="mb-1 px-3 font-mono text-[.6rem] font-medium uppercase tracking-[.12em] text-muted">${group}</h2><div class="space-y-1">${links}</div></div>`;
+    return `<div class="min-w-max lg:min-w-0"><h2 class="mb-1 px-3 font-mono text-[.6rem] font-medium uppercase tracking-[.12em] text-muted">${groupLabel(group)}</h2><div class="space-y-1">${links}</div></div>`;
+}
+
+function groupLabel(group: string) {
+    if (group === "Valid responses") return "Binding reference";
+    if (group === "Expected rejections") return "Rejection cases";
+    return group;
 }
 
 function slug(value: string) {

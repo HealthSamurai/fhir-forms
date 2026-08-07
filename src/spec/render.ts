@@ -4,35 +4,45 @@ type Page = { id: string; file: string; label: string };
 
 const LABELS: Record<string, string> = {
     index: "Overview",
-    generator: "Scaffold generator",
-    "field-names": "Field names",
-    "entry-list": "Form entry list",
-    types: "FHIR type binding",
-    rendering: "Rendering",
-    repeats: "Repetition",
+    "html-binding": "HTML binding",
+    "type-binding": "FHIR type binding",
+    "dynamic-behavior": "Dynamic behavior",
+    collector: "Collector",
+    tooling: "Generator & linter",
     "server-lifecycle": "Server lifecycle",
-    expressions: "Enablement & calculations",
-    parser: "Collector & validation",
-    linter: "Form linter",
     conformance: "Conformance",
-    decisions: "Decisions",
-    "open-questions": "Open questions",
+    "design-notes": "Design notes",
     "prior-art": "Prior art",
     compatibility: "Compatibility index",
 };
 
 const NAVIGATION = [
     { label: "Start", ids: ["index"] },
-    { label: "HTML contract", ids: ["rendering", "field-names", "repeats", "entry-list", "types"] },
-    { label: "Runtime components", ids: ["generator", "parser", "linter", "expressions"] },
-    { label: "Protocol", ids: ["server-lifecycle"] },
-    { label: "Output", ids: ["conformance"] },
-    { label: "Examples", ids: ["examples/blood-pressure", "examples/phq9", "examples/diagnosis"] },
-    { label: "Design notes", ids: ["decisions", "open-questions", "prior-art", "compatibility"] },
+    { label: "Core specification", ids: ["html-binding", "type-binding", "dynamic-behavior", "collector", "server-lifecycle", "conformance"] },
+    { label: "Tooling", ids: ["tooling"] },
+    { label: "Design notes", ids: ["design-notes", "prior-art", "compatibility"] },
 ];
 
 const ALIASES: Record<string, string> = {
-    "collect-and-render": "rendering",
+    concepts: "index",
+    components: "index",
+    rendering: "html-binding",
+    "field-names": "html-binding",
+    "entry-list": "html-binding",
+    types: "type-binding",
+    repeats: "dynamic-behavior",
+    expressions: "dynamic-behavior",
+    parser: "collector",
+    generator: "tooling",
+    linter: "tooling",
+    exchange: "server-lifecycle",
+    extraction: "server-lifecycle",
+    decisions: "design-notes",
+    "open-questions": "design-notes",
+    "examples/blood-pressure": "type-binding",
+    "examples/phq9": "dynamic-behavior",
+    "examples/diagnosis": "html-binding",
+    "collect-and-render": "html-binding",
 };
 
 export default async function (ctx: Context, _session: Session | null, opts: { page?: string }) {

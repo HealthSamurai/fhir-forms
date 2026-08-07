@@ -14,14 +14,14 @@ components as implemented unless code and tests exist.
 ## Source of truth
 
 - docs/index.md is the specification overview and authoritative reading order.
-- docs/field-names.md defines the canonical public field-path grammar.
-- docs/entry-list.md defines the browser submission model.
-- docs/types.md defines lexical-to-FHIR type binding.
-- docs/parser.md defines collection and result validation.
+- docs/html-binding.md defines paths and the browser submission model.
+- docs/type-binding.md defines lexical-to-FHIR type binding.
+- docs/dynamic-behavior.md defines repeats, enablement, and calculations.
+- docs/collector.md defines collection and result validation.
 - docs/server-lifecycle.md defines recompute, persistence, and extraction order.
 - docs/conformance.md defines normative conformance requirements.
-- docs/decisions.md records accepted design decisions.
-- docs/open-questions.md records unresolved design questions.
+- docs/tooling.md defines Generator and Form Linter behavior.
+- docs/design-notes.md records decisions and open questions.
 - prior-art.md is research, not normative text.
 - spec.md is only a compatibility index for the former single-file draft.
 
@@ -51,7 +51,7 @@ specification into this file, TypeScript templates, or worked examples.
 
 ## Canonical field paths
 
-Use only the grammar documented in docs/field-names.md:
+Use only the grammar documented in docs/html-binding.md:
 
 ~~~text
 item[linkId]
@@ -67,7 +67,7 @@ child items or supported FHIR datatype components. Repeat indexes are zero-based
 Percent-encode linkId selector contents as specified and decode them exactly once.
 
 Do not introduce obsolete slash paths, hash/at repeat markers, or colon
-components. Optional atomic Coding sugar is documented in docs/field-names.md;
+components. Optional atomic Coding sugar is documented in docs/html-binding.md;
 never mix it with component fields for the same occurrence.
 
 Keep these concepts distinct:
