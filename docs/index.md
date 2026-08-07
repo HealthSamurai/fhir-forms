@@ -6,19 +6,39 @@ interaction.
 
 ## Why this specification exists
 
-Modern HTML and JavaScript can implement effectively any layout, widget or
-interaction model. Questionnaire cannot, and should not, encode that entire
-space. Adding dozens of rendering extensions still cannot make a generic
-Questionnaire renderer equivalent to an arbitrary application interface; it only
-couples the definition to a particular renderer.
+Modern HTML and JavaScript can implement effectively any interface: composed
+widgets, spatial layouts, progressive disclosure, asynchronous search, decision
+support and application-specific workflows. Questionnaire cannot, and should
+not, encode that entire presentation space.
 
-This specification defines a smaller boundary: HTML may be arbitrary when its
-successful controls follow a public, Questionnaire-aware binding contract.
+**Questionnaire is the contract, not the interface.** It defines questions,
+answer types, constraints and portable behavior. A generic SDC renderer remains
+the right tool for safe, portable forms. But adding more rendering extensions
+does not eventually produce arbitrary application UI; it recreates HTML
+indirectly, couples the definition to a renderer and still limits what designers,
+developers and agents can build.
+
+FHIR Forms provides a smaller boundary. HTML remains arbitrary when its
+successful controls follow public, Questionnaire-aware names. The collector
+combines the Questionnaire and submitted controls to produce and validate a
+QuestionnaireResponse.
 
 <figure style="margin:2rem 0"><img src="/spec/architecture.svg" alt="Questionnaire and HTML form produce a validated QuestionnaireResponse through shared generation, linting and collection." style="width:100%;height:auto"></figure>
 
 This is a presentation layer, not another UI schema. It does not prescribe CSS,
-DOM structure, components or a JavaScript framework.
+DOM structure, components or a JavaScript framework. A generator may create the
+initial form, a human or agent may refine it, and a linter may check the binding
+without making any of those tools part of the runtime contract.
+
+The distinction is especially visible with agents: given HTML, they routinely
+produce rich, task-specific interfaces; forced through a Questionnaire renderer,
+the same forms collapse back to the renderer's widget vocabulary. The missing
+piece is not another widget extension, but a standard bridge between an
+unconstrained presentation and the Questionnaire data contract.
+
+This approach complements SDC rather than replacing it: use a generic renderer
+when portability is the priority; use Questionnaire-bound HTML when the
+interface needs the full expressive power of the web.
 
 Two visually different forms are equivalent when their successful controls and
 dynamic behavior preserve the same Questionnaire semantics. Visual similarity is
