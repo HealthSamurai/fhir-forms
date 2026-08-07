@@ -6,7 +6,7 @@ renderer, test, agent, or another UI can post the same public field contract and
 produce the same typed QuestionnaireResponse.
 
 - [Specification overview](docs/index.md)
-- [Presentation-layer model](docs/concepts.md)
+- [Presentation-layer model](docs/index.md)
 - [Field-path grammar](docs/field-names.md)
 - [HTML entry-list semantics](docs/entry-list.md)
 - [FHIR type binding](docs/types.md)

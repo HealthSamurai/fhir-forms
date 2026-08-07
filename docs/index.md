@@ -23,16 +23,14 @@ instead makes extraction and validation non-portable.
 This specification defines a smaller boundary: HTML may be arbitrary when its
 successful controls follow a public, Questionnaire-aware binding contract.
 
-~~~text
-Questionnaire
-    -> canonical field bindings
-arbitrary dynamic HTML
-    -> ordered form entry list
-QuestionnaireResponse
-~~~
+<figure style="margin:2rem 0"><img src="/spec/architecture.svg" alt="Questionnaire and HTML form produce a validated QuestionnaireResponse through shared generation, linting and collection." style="width:100%;height:auto"></figure>
 
 This is a presentation layer, not another UI schema. It does not prescribe CSS,
 DOM structure, components or a JavaScript framework.
+
+Two visually different forms are equivalent when their successful controls and
+dynamic behavior preserve the same Questionnaire semantics. Visual similarity is
+not sufficient if a form changes ancestry, cardinality, types or enabled state.
 
 ## Contract
 
@@ -49,21 +47,21 @@ DOM structure, components or a JavaScript framework.
 
 ## Components
 
-- [Scaffold Generator](generator.md): creates editable conforming HTML.
-- [Collector](parser.md): creates and validates QuestionnaireResponse.
-- [Form Linter](linter.md): checks HTML bindings and required scenarios.
-- [Reactive Runtime](expressions.md): executes enablement and calculations.
-- Renderer: an optional producer of conforming HTML.
+| component | input | output |
+|---|---|---|
+| [Scaffold Generator](generator.md) | Questionnaire | editable HTML + warnings |
+| [Form Linter](linter.md) | Questionnaire + HTML | findings + unverified scenarios |
+| [Collector](parser.md) | Questionnaire + entry list | QuestionnaireResponse or issues |
+| [Reactive Runtime](expressions.md) | Questionnaire rules + current entries | enabled state + calculated previews |
 
-All components use the same path, type, cardinality and rule semantics. See
-[Components and shared kernel](components.md).
+All components share canonical path resolution, type binding, cardinality and
+rule semantics. A Renderer is only an optional producer of conforming HTML.
 
 ## Reading order
 
 ### Model
 
-1. [The presentation layer](concepts.md)
-2. [Rendering Questionnaire items](rendering.md)
+1. [Rendering Questionnaire items](rendering.md)
 
 ### HTML contract
 
@@ -76,9 +74,8 @@ All components use the same path, type, cardinality and rule semantics. See
 
 1. [Collector and result validation](parser.md)
 2. [Enablement and calculated fields](expressions.md)
-3. [Request and response exchange](exchange.md)
-4. [Extraction](extraction.md)
-5. [Conformance](conformance.md)
+3. [Server lifecycle and extraction](server-lifecycle.md)
+4. [Conformance](conformance.md)
 
 ### Examples
 
@@ -91,4 +88,3 @@ All components use the same path, type, cardinality and rule semantics. See
 - [Decisions](decisions.md)
 - [Open questions](open-questions.md)
 - [Prior art](../prior-art.md)
-

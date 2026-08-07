@@ -20,9 +20,13 @@ ${opts.headExtra ?? ""}
 <body>
 <header class="sticky top-0 z-20 flex min-h-[68px] items-center justify-between gap-8 border-b border-ink/15 bg-paper/90 px-4 backdrop-blur-xl sm:px-[4vw]">
   <a class="inline-flex items-baseline gap-2.5 text-[1.05rem] font-bold tracking-[-.025em] no-underline" href="/">
-    <span class="inline-grid size-[30px] -rotate-[7deg] place-items-center rounded-[50%_50%_50%_12%] bg-teal font-mono text-[.74rem] text-white">QR</span>
+    <span class="inline-grid size-[30px] place-items-center" aria-hidden="true">
+      <svg viewBox="0 0 32 38" width="27" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.6 1.8c1.2 7.1-3.8 9.6-6.6 13.8-1.6 2.4-2.1 5.1-.9 7.5-3.4-1.5-4.7-5.2-3.5-9.3C2.5 17.4.3 22 .9 26.5 1.7 33 7.6 37.2 14.3 37.2c8.8 0 15.8-5.6 16.5-13.5.7-7.6-4.3-14.8-13.2-21.9Z" fill="#238C7D"/>
+        <path d="M18.6 17.2c.5 3.7-2.6 5.2-4.1 7.7-.9 1.5-1 3.2-.1 4.6-1.8-.5-3.2-2-3.4-4.1-1.7 1.7-2.2 4.1-1 6.1 1.2 2.1 3.5 3.2 6.1 3.2 4.5 0 8.1-2.8 8.3-6.9.2-4-2.4-7.6-5.8-10.6Z" fill="#BFE8DC"/>
+      </svg>
+    </span>
     <span>FHIR Forms</span>
-    <small class="hidden font-mono text-[.68rem] font-normal text-muted sm:inline">proc runtime</small>
   </a>
   <nav class="flex items-center gap-1" aria-label="Primary">
     <a class="rounded-full px-3 py-2 text-sm font-semibold text-muted no-underline hover:bg-teal-soft hover:text-teal-dark" href="/">Specification</a>

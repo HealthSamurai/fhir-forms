@@ -18,6 +18,7 @@ components as implemented unless code and tests exist.
 - docs/entry-list.md defines the browser submission model.
 - docs/types.md defines lexical-to-FHIR type binding.
 - docs/parser.md defines collection and result validation.
+- docs/server-lifecycle.md defines recompute, persistence, and extraction order.
 - docs/conformance.md defines normative conformance requirements.
 - docs/decisions.md records accepted design decisions.
 - docs/open-questions.md records unresolved design questions.

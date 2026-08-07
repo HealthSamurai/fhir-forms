@@ -4,17 +4,14 @@ type Page = { id: string; file: string; label: string };
 
 const LABELS: Record<string, string> = {
     index: "Overview",
-    concepts: "Presentation layer",
-    components: "Components",
     generator: "Scaffold generator",
     "field-names": "Field names",
     "entry-list": "Form entry list",
     types: "FHIR type binding",
     rendering: "Rendering",
     repeats: "Repetition",
-    exchange: "Exchange",
+    "server-lifecycle": "Server lifecycle",
     expressions: "Enablement & calculations",
-    extraction: "Extraction",
     parser: "Collector & validation",
     linter: "Form linter",
     conformance: "Conformance",
@@ -25,11 +22,11 @@ const LABELS: Record<string, string> = {
 };
 
 const NAVIGATION = [
-    { label: "Start", ids: ["index", "concepts", "components"] },
+    { label: "Start", ids: ["index"] },
     { label: "HTML contract", ids: ["rendering", "field-names", "repeats", "entry-list", "types"] },
     { label: "Runtime components", ids: ["generator", "parser", "linter", "expressions"] },
-    { label: "Protocol", ids: ["exchange"] },
-    { label: "Output", ids: ["extraction", "conformance"] },
+    { label: "Protocol", ids: ["server-lifecycle"] },
+    { label: "Output", ids: ["conformance"] },
     { label: "Examples", ids: ["examples/blood-pressure", "examples/phq9", "examples/diagnosis"] },
     { label: "Design notes", ids: ["decisions", "open-questions", "prior-art", "compatibility"] },
 ];
