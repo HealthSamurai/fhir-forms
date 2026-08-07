@@ -13,14 +13,12 @@ const LABELS: Record<string, string> = {
     conformance: "Conformance",
     "design-notes": "Design notes",
     "prior-art": "Prior art",
-    compatibility: "Compatibility index",
 };
 
 const NAVIGATION = [
     { label: "Start", ids: ["index"] },
     { label: "Core specification", ids: ["html-binding", "type-binding", "dynamic-behavior", "collector", "server-lifecycle", "conformance"] },
     { label: "Tooling", ids: ["tooling"] },
-    { label: "Design notes", ids: ["design-notes", "prior-art", "compatibility"] },
 ];
 
 const ALIASES: Record<string, string> = {
@@ -77,7 +75,6 @@ function pagesAt(root: string): Page[] {
     const examples = [...new Bun.Glob("examples/**/*.md").scanSync({ cwd: resolve(root, "docs") })].map(file => page(`docs/${file}`));
     const extras = [
         { id: "prior-art", file: "prior-art.md", label: "Prior art" },
-        { id: "compatibility", file: "spec.md", label: "Compatibility index" },
     ];
     const order = NAVIGATION.flatMap(section => section.ids);
     return [...core, ...examples, ...extras].sort((a, b) => {
